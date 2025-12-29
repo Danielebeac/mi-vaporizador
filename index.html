@@ -3,213 +3,242 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crafty+ Master Control</title>
+    <title>Control Crafty+ / Mighty+</title>
     <style>
-        body { font-family: 'Courier New', monospace; background-color: #050505; color: #00ffcc; text-align: center; padding: 20px; margin: 0; }
-        h1 { text-shadow: 0 0 10px #00ffcc; margin-bottom: 5px; font-size: 1.5rem; }
-        .status { color: #888; font-size: 0.8rem; margin-bottom: 20px; }
-        
-        /* Tarjetas */
-        .card { background: #1a1a1a; border: 1px solid #333; border-radius: 12px; padding: 15px; margin: 15px auto; max-width: 320px; box-shadow: 0 4px 15px rgba(0,255,204,0.1); }
-        .value { font-size: 48px; font-weight: bold; color: #fff; margin: 10px 0; }
-        .sub-value { font-size: 14px; color: #aaa; }
+        /* ESTILOS: Diseño oscuro similar a tu app */
+        body {
+            background-color: #0d0d0d;
+            color: #ffffff;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
 
-        /* Botones */
-        button { border: none; padding: 15px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; width: 100%; margin-top: 10px; transition: transform 0.1s; }
-        button:active { transform: scale(0.98); }
-        .btn-connect { background: linear-gradient(45deg, #00b09b, #96c93d); color: #000; }
-        .btn-set { background: #e67e22; color: white; }
-        .btn-cata { background: linear-gradient(45deg, #8e44ad, #c0392b); color: white; box-shadow: 0 0 10px #8e44ad; }
-        .btn-debug { background: #333; color: #888; font-size: 12px; padding: 10px; }
+        .card {
+            background-color: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 10px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+        }
 
-        input { font-size: 24px; padding: 5px; width: 80px; text-align: center; background: #222; border: 1px solid #444; color: white; border-radius: 5px; }
-        
-        /* Logs */
-        #logs { font-size: 10px; color: #555; text-align: left; margin-top: 30px; border-top: 1px solid #333; padding: 10px; height: 150px; overflow-y: scroll; background: #000; }
+        h2 {
+            color: #00ffcc; /* Color verdoso de tus textos */
+            font-size: 16px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .big-text {
+            font-size: 48px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .status-label {
+            color: #888;
+            font-size: 14px;
+        }
+
+        /* Botón Naranja Principal */
+        .btn-action {
+            background-color: #e67e22; /* Naranja */
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 10px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .btn-action:active {
+            background-color: #d35400;
+        }
+
+        /* Botón Conectar */
+        .btn-connect {
+            background: linear-gradient(90deg, #8e44ad, #c0392b);
+            color: white;
+            border: none;
+            padding: 15px;
+            width: 100%;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+
+        input[type="number"] {
+            background-color: #333;
+            color: white;
+            border: 1px solid #555;
+            padding: 10px;
+            font-size: 24px;
+            width: 80px;
+            text-align: center;
+            border-radius: 5px;
+        }
     </style>
 </head>
 <body>
 
-    <h1>🌫️ CRAFTY+ MASTER</h1>
-    <div id="statusText" class="status">Desconectado</div>
-
-    <div id="connectPanel">
-        <button class="btn-connect" onclick="connect()">🔌 CONECTAR DISPOSITIVO</button>
+    <div class="card">
+        <button id="btnConnect" class="btn-connect" onclick="conectarDispositivo()">
+            ▶ INICIAR CONEXIÓN
+        </button>
+        <div id="statusConnection" class="status-label">Desconectado</div>
     </div>
 
-    <div id="app" style="display:none;">
-        
-        <div class="card" style="border-color: #8e44ad;">
-            <small>🍷 MODO CATADOR</small>
-            <div id="cataStatus" class="sub-value">Listo para iniciar</div>
-            <button class="btn-cata" onclick="startCata()">▶ INICIAR SESIÓN</button>
-            <p style="font-size:10px; color:#aaa;">Inicia en 175°C y sube cada 45s</p>
-        </div>
-
-        <div class="card">
-            <small>TEMPERATURA ACTUAL</small>
-            <div id="tempDisplay" class="value">--.-</div>
-            <small>OBJETIVO: <span id="targetDisplay">--</span>°C</small>
-        </div>
-
-        <div class="card">
-            <small>CONTROL MANUAL</small>
-            <br><br>
-            <input type="number" id="targetInput" value="180"> °C
-            <button class="btn-set" onclick="setTemperature()">FIJAR TEMPERATURA</button>
-        </div>
-
-        <div class="card">
-            <small>DIAGNÓSTICO BATERÍA</small>
-            <div id="batDisplay" class="value" style="font-size:24px;">--%</div>
-            <button class="btn-debug" onclick="scanServices()">🔍 ESCANEAR UUIDs</button>
-        </div>
+    <div class="card">
+        <h2>Temperatura Actual</h2>
+        <div class="big-text"><span id="tempActual">--</span>°C</div>
     </div>
 
-    <div id="logs"></div>
+    <div class="card">
+        <h2>Control Manual</h2>
+        <div style="margin-bottom: 15px;">
+            <input type="number" id="inputTemp" value="180"> °C
+        </div>
+        <button class="btn-action" onclick="fijarTemperatura()">
+            FIJAR / CALENTAR
+        </button>
+        <br><br>
+        <button class="btn-action" style="background-color: #444;" onclick="detenerCalentamiento()">
+            DETENER (OFF)
+        </button>
+    </div>
+
+    <div class="card">
+        <h2>Batería</h2>
+        <div class="big-text"><span id="batteryLevel">--</span>%</div>
+    </div>
 
     <script>
-        // CONFIGURACIÓN
-        // UUIDs Invertidos (Modo Espejo)
-        const SUFFIX = '-4c45-4b43-4942-265a524f5453';
-        const SERVICE_MAIN = '00000001' + SUFFIX; 
-        const CHAR_TEMP    = '00000011' + SUFFIX; 
-        const CHAR_TARGET  = '00000021' + SUFFIX; 
+        // --- CONSTANTES DE UUID (STORZ & BICKEL) ---
+        const SERVICE_UUID = '00000001-5354-4f52-5a26-4249434b454c';
         
-        // Variables globales
+        // Características Específicas
+        const CHAR_TEMP_ACTUAL  = '00000011-5354-4f52-5a26-4249434b454c'; // Lectura (Read/Notify)
+        const CHAR_TEMP_TARGET  = '00000021-5354-4f52-5a26-4249434b454c'; // Escritura (Write)
+        const CHAR_BATTERY      = '00000003-5354-4f52-5a26-4249434b454c'; // Lectura (Read)
+
+        // Variables globales para guardar las referencias
         let deviceCache = null;
-        let serverCache = null;
-        let cache = {};
-        let pollingInterval;
+        let charTargetTemp = null; // Aquí escribiremos para "Encender"
 
-        function log(msg) {
-            const logDiv = document.getElementById('logs');
-            logDiv.innerHTML = `> ${msg}<br>` + logDiv.innerHTML;
-        }
-
-        async function connect() {
+        // 1. FUNCIÓN PARA CONECTAR
+        async function conectarDispositivo() {
             try {
-                log("Solicitando conexión...");
+                console.log('Buscando dispositivos Storz & Bickel...');
+                
                 const device = await navigator.bluetooth.requestDevice({
-                    filters: [{ namePrefix: 'STORZ' }], 
-                    optionalServices: [SERVICE_MAIN] 
+                    filters: [{ services: [SERVICE_UUID] }]
                 });
 
                 deviceCache = device;
-                document.getElementById('statusText').innerText = "Conectado a: " + device.name;
+                document.getElementById('statusConnection').innerText = "Conectando...";
                 
+                // Conectar al servidor GATT
                 const server = await device.gatt.connect();
-                serverCache = server; // Guardamos para escanear después
+                console.log('Conectado al servidor GATT');
+
+                // Obtener el Servicio Principal
+                const service = await server.getPrimaryService(SERVICE_UUID);
+
+                // --- A. OBTENER CARACTERÍSTICA DE BATERÍA (Solución a tu error de lectura) ---
+                try {
+                    const batteryChar = await service.getCharacteristic(CHAR_BATTERY);
+                    const value = await batteryChar.readValue();
+                    // La batería suele venir en el primer byte o como entero corto
+                    const porcentaje = value.getUint16(0, true); // true = Little Endian
+                    document.getElementById('batteryLevel').innerText = porcentaje;
+                    console.log("Batería detectada:", porcentaje);
+                } catch (err) {
+                    console.error("Error leyendo batería:", err);
+                    document.getElementById('batteryLevel').innerText = "Err";
+                }
+
+                // --- B. OBTENER TEMPERATURA ACTUAL (Para mostrar en pantalla) ---
+                try {
+                    const tempChar = await service.getCharacteristic(CHAR_TEMP_ACTUAL);
+                    await tempChar.startNotifications();
+                    tempChar.addEventListener('characteristicvaluechanged', (event) => {
+                        const val = event.target.value;
+                        const temp = val.getUint16(0, true) / 10; // Dividir por 10
+                        document.getElementById('tempActual').innerText = temp.toFixed(1);
+                    });
+                    console.log("Notificaciones de temperatura activadas");
+                } catch (err) {
+                    console.error("Error leyendo temp actual:", err);
+                }
+
+                // --- C. OBTENER CONTROL (Para el botón de encendido) ---
+                charTargetTemp = await service.getCharacteristic(CHAR_TEMP_TARGET);
                 
-                const service = await server.getPrimaryService(SERVICE_MAIN);
-                log("Servicio principal OK");
+                document.getElementById('statusConnection').innerText = "CONECTADO: " + device.name;
+                document.getElementById('btnConnect').style.display = 'none';
 
-                // Conectar características críticas
-                try { cache['temp'] = await service.getCharacteristic(CHAR_TEMP); } catch(e) { log("Error Temp: " + e); }
-                try { cache['target'] = await service.getCharacteristic(CHAR_TARGET); } catch(e) { log("Error Target: " + e); }
-
-                // UI
-                document.getElementById('connectPanel').style.display = 'none';
-                document.getElementById('app').style.display = 'block';
-
-                // Iniciar bucle de lectura
-                startPolling();
-
-            } catch (err) {
-                alert("Error: " + err);
+            } catch (error) {
+                console.error('Error de conexión:', error);
+                alert('No se pudo conectar. Asegúrate de usar Chrome/Bluefy y tener Bluetooth activo.');
             }
         }
 
-        async function startPolling() {
-            pollingInterval = setInterval(async () => {
-                if (cache['temp']) {
-                    const val = await cache['temp'].readValue();
-                    const cel = val.getUint16(0, true) / 10;
-                    document.getElementById('tempDisplay').innerText = cel.toFixed(1) + "°C";
-                }
-            }, 2000);
-        }
-
-        async function setTemperature(val = null) {
-            if (!cache['target']) return alert("Error: No hay conexión de control");
-            
-            // Si no nos pasan valor, lo tomamos del input
-            const num = val ? val : parseInt(document.getElementById('targetInput').value);
-            
-            // Actualizar UI visualmente
-            document.getElementById('targetDisplay').innerText = num;
-            document.getElementById('targetInput').value = num;
-
-            // Enviar comando Bluetooth
-            const buffer = new Uint16Array([num * 10]);
-            await cache['target'].writeValue(buffer);
-            log(`Comando enviado: ${num}°C`);
-        }
-
-        // --- LÓGICA MODO CATADOR ---
-        async function startCata() {
-            const pasos = [175, 180, 185, 190, 195];
-            const tiempoEntrePasos = 45000; // 45 segundos (ajustable)
-            
-            let btn = document.querySelector('.btn-cata');
-            let status = document.getElementById('cataStatus');
-            
-            btn.disabled = true;
-            btn.style.background = "#555";
-            btn.innerText = "⏳ SESIÓN EN CURSO...";
-
-            for (let i = 0; i < pasos.length; i++) {
-                let temp = pasos[i];
-                status.innerText = `Paso ${i+1}/${pasos.length}: Calentando a ${temp}°C`;
-                log(`[CATADOR] Subiendo a ${temp}°C`);
-                
-                await setTemperature(temp);
-                
-                // Esperar tiempo (Countdown visual simple)
-                if (i < pasos.length - 1) {
-                    await new Promise(r => setTimeout(r, tiempoEntrePasos));
-                }
+        // 2. FUNCIÓN PARA "ENCENDER" (Fijar Temperatura)
+        async function fijarTemperatura() {
+            if (!charTargetTemp) {
+                alert("¡Primero conecta el dispositivo!");
+                return;
             }
 
-            status.innerText = "✅ Sesión Finalizada (195°C)";
-            btn.disabled = false;
-            btn.innerText = "▶ INICIAR SESIÓN";
-            btn.style.background = "linear-gradient(45deg, #8e44ad, #c0392b)";
-            alert("¡Sesión de cata terminada! Disfruta.");
-        }
-
-        // --- LÓGICA ESCÁNER BATERÍA ---
-        async function scanServices() {
-            if (!serverCache) return alert("Primero conecta el dispositivo");
-            log("--- INICIANDO ESCANEO PROFUNDO ---");
+            const grados = document.getElementById('inputTemp').value;
             
             try {
-                const service = await serverCache.getPrimaryService(SERVICE_MAIN);
-                const characteristics = await service.getCharacteristics();
+                // El truco: Multiplicar por 10 y enviar como Uint16 Little Endian
+                const valorEnviar = grados * 10;
                 
-                for (const c of characteristics) {
-                    try {
-                        const val = await c.readValue();
-                        // Intentar leer valor byte simple (0-255)
-                        const intVal = val.getUint8(0); 
-                        // Intentar leer short (como temp)
-                        const shortVal = val.getUint16(0, true);
+                const buffer = new ArrayBuffer(2);
+                const view = new DataView(buffer);
+                view.setUint16(0, valorEnviar, true); // Little Endian es CLAVE
 
-                        log(`UUID: ...${c.uuid.slice(4, 8)} | Val(8): ${intVal} | Val(16): ${shortVal}`);
-
-                        // Si parece una batería (0-100) y NO es una de las temperaturas
-                        if (intVal > 0 && intVal <= 100 && intVal !== 32) { // 32 suele ser un byte basura
-                            document.getElementById('batDisplay').innerText = intVal + "% (Posible)";
-                            log(`¡ENCONTRADO POSIBLE BATERÍA! UUID termina en: ${c.uuid.slice(4,8)}`);
-                        }
-                    } catch (err) {
-                        log(`UUID Protegido/Escritura: ...${c.uuid.slice(4, 8)}`);
-                    }
-                }
-            } catch (e) {
-                log("Error escaneo: " + e);
+                await charTargetTemp.writeValue(buffer);
+                
+                console.log(`Comando enviado: Calentar a ${grados}°C`);
+                alert(`Iniciando calentamiento a ${grados}°C`);
+                
+            } catch (error) {
+                console.error("Error al enviar temperatura:", error);
+                alert("Error al intentar calentar.");
             }
-            log("--- FIN ESCANEO ---");
+        }
+
+        // 3. FUNCIÓN PARA DETENER
+        async function detenerCalentamiento() {
+            if (!charTargetTemp) return;
+            
+            try {
+                // Enviar 0 detiene el calentador
+                const buffer = new ArrayBuffer(2);
+                const view = new DataView(buffer);
+                view.setUint16(0, 0, true); 
+
+                await charTargetTemp.writeValue(buffer);
+                alert("Calentamiento detenido (Standby)");
+            } catch (error) {
+                console.error(error);
+            }
         }
     </script>
 </body>
