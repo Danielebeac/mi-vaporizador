@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crafty+ Master Control</title>
+    <title>Crafty+ Master Control (Fixed)</title>
     <style>
         body { font-family: 'Courier New', monospace; background-color: #050505; color: #00ffcc; text-align: center; padding: 20px; margin: 0; }
         h1 { text-shadow: 0 0 10px #00ffcc; margin-bottom: 5px; font-size: 1.5rem; }
@@ -20,7 +20,7 @@
         .btn-connect { background: linear-gradient(45deg, #00b09b, #96c93d); color: #000; }
         .btn-set { background: #e67e22; color: white; }
         .btn-cata { background: linear-gradient(45deg, #8e44ad, #c0392b); color: white; box-shadow: 0 0 10px #8e44ad; }
-        .btn-debug { background: #333; color: #888; font-size: 12px; padding: 10px; }
+        .btn-off { background: #444; color: #fff; }
 
         input { font-size: 24px; padding: 5px; width: 80px; text-align: center; background: #222; border: 1px solid #444; color: white; border-radius: 5px; }
         
@@ -57,28 +57,28 @@
             <br><br>
             <input type="number" id="targetInput" value="180"> °C
             <button class="btn-set" onclick="setTemperature()">FIJAR TEMPERATURA</button>
+            <button class="btn-off" onclick="setTemperature(0)">DETENER (OFF)</button>
         </div>
 
         <div class="card">
-            <small>DIAGNÓSTICO BATERÍA</small>
+            <small>BATERÍA</small>
             <div id="batDisplay" class="value" style="font-size:24px;">--%</div>
-            <button class="btn-debug" onclick="scanServices()">🔍 ESCANEAR UUIDs</button>
         </div>
     </div>
 
     <div id="logs"></div>
 
     <script>
-        // CONFIGURACIÓN
-        // UUIDs Invertidos (Modo Espejo)
+        // --- CONFIGURACIÓN TÉCNICA (UUIDs) ---
+        // Mantenemos tu lógica de sufijos que funcionaba
         const SUFFIX = '-4c45-4b43-4942-265a524f5453';
         const SERVICE_MAIN = '00000001' + SUFFIX; 
+        const CHAR_BATTERY = '00000003' + SUFFIX; // <--- AGREGADO: UUID Batería Real
         const CHAR_TEMP    = '00000011' + SUFFIX; 
         const CHAR_TARGET  = '00000021' + SUFFIX; 
         
         // Variables globales
         let deviceCache = null;
-        let serverCache = null;
         let cache = {};
         let pollingInterval;
 
@@ -90,66 +90,110 @@
         async function connect() {
             try {
                 log("Solicitando conexión...");
+                // Usamos TU filtro original que sí funciona
                 const device = await navigator.bluetooth.requestDevice({
                     filters: [{ namePrefix: 'STORZ' }], 
                     optionalServices: [SERVICE_MAIN] 
                 });
 
                 deviceCache = device;
-                document.getElementById('statusText').innerText = "Conectado a: " + device.name;
+                document.getElementById('statusText').innerText = "Conectando a: " + device.name;
                 
                 const server = await device.gatt.connect();
-                serverCache = server; // Guardamos para escanear después
-                
                 const service = await server.getPrimaryService(SERVICE_MAIN);
                 log("Servicio principal OK");
 
-                // Conectar características críticas
+                // --- MAPEO DE CARACTERÍSTICAS (Corregido) ---
                 try { cache['temp'] = await service.getCharacteristic(CHAR_TEMP); } catch(e) { log("Error Temp: " + e); }
                 try { cache['target'] = await service.getCharacteristic(CHAR_TARGET); } catch(e) { log("Error Target: " + e); }
+                
+                // Intentamos conectar la batería específicamente
+                try { 
+                    cache['battery'] = await service.getCharacteristic(CHAR_BATTERY); 
+                    log("Batería detectada correctamente");
+                } catch(e) { 
+                    log("No se pudo acceder a lectura directa de batería"); 
+                }
 
-                // UI
+                // UI setup
                 document.getElementById('connectPanel').style.display = 'none';
                 document.getElementById('app').style.display = 'block';
 
-                // Iniciar bucle de lectura
+                // Iniciar bucle de lectura automática
                 startPolling();
 
             } catch (err) {
-                alert("Error: " + err);
+                alert("Error de conexión: " + err);
+                log("Error: " + err);
             }
         }
 
         async function startPolling() {
+            // Leemos datos cada 2 segundos
             pollingInterval = setInterval(async () => {
+                
+                // 1. LEER TEMPERATURA
                 if (cache['temp']) {
-                    const val = await cache['temp'].readValue();
-                    const cel = val.getUint16(0, true) / 10;
-                    document.getElementById('tempDisplay').innerText = cel.toFixed(1) + "°C";
+                    try {
+                        const val = await cache['temp'].readValue();
+                        const cel = val.getUint16(0, true) / 10;
+                        document.getElementById('tempDisplay').innerText = cel.toFixed(1) + "°C";
+                    } catch(e) { console.log(e); }
                 }
+
+                // 2. LEER BATERÍA (Corrección)
+                if (cache['battery']) {
+                    try {
+                        const val = await cache['battery'].readValue();
+                        const batLevel = val.getUint16(0, true); // Storz suele usar Uint16 para bateria
+                        document.getElementById('batDisplay').innerText = batLevel + "%";
+                    } catch(e) { 
+                         // Fallback por si es Uint8 en modelos viejos
+                         try {
+                             const val = await cache['battery'].readValue();
+                             const batLevel = val.getUint8(0);
+                             document.getElementById('batDisplay').innerText = batLevel + "%";
+                         } catch(err) { console.log(err); }
+                    }
+                }
+
             }, 2000);
         }
 
+        // --- FUNCIÓN DE CONTROL (ENCENDER / CAMBIAR TEMP) ---
         async function setTemperature(val = null) {
             if (!cache['target']) return alert("Error: No hay conexión de control");
             
-            // Si no nos pasan valor, lo tomamos del input
-            const num = val ? val : parseInt(document.getElementById('targetInput').value);
+            // Si pasamos 0, es apagar. Si no, leemos el input.
+            let num = val !== null ? val : parseInt(document.getElementById('targetInput').value);
             
-            // Actualizar UI visualmente
-            document.getElementById('targetDisplay').innerText = num;
-            document.getElementById('targetInput').value = num;
+            // Actualizar UI
+            if (num > 0) {
+                document.getElementById('targetDisplay').innerText = num;
+                document.getElementById('targetInput').value = num;
+            } else {
+                document.getElementById('targetDisplay').innerText = "OFF";
+            }
 
-            // Enviar comando Bluetooth
-            const buffer = new Uint16Array([num * 10]);
-            await cache['target'].writeValue(buffer);
-            log(`Comando enviado: ${num}°C`);
+            // CORRECCIÓN IMPORTANTE: Usar DataView para Little Endian
+            try {
+                const valorEnviar = num * 10; // Ejemplo: 180 -> 1800
+                const buffer = new ArrayBuffer(2);
+                const view = new DataView(buffer);
+                view.setUint16(0, valorEnviar, true); // 'true' asegura el orden de bytes correcto
+
+                await cache['target'].writeValue(buffer);
+                log(`Orden enviada: ${num === 0 ? 'APAGAR' : num + '°C'}`);
+                
+            } catch (e) {
+                log("Error al escribir comando: " + e);
+            }
         }
 
         // --- LÓGICA MODO CATADOR ---
         async function startCata() {
             const pasos = [175, 180, 185, 190, 195];
-            const tiempoEntrePasos = 45000; // 45 segundos (ajustable)
+            const tiempoEntrePasos = 45000; // 45 segundos
             
             let btn = document.querySelector('.btn-cata');
             let status = document.getElementById('cataStatus');
@@ -165,7 +209,7 @@
                 
                 await setTemperature(temp);
                 
-                // Esperar tiempo (Countdown visual simple)
+                // Esperar tiempo
                 if (i < pasos.length - 1) {
                     await new Promise(r => setTimeout(r, tiempoEntrePasos));
                 }
@@ -175,41 +219,7 @@
             btn.disabled = false;
             btn.innerText = "▶ INICIAR SESIÓN";
             btn.style.background = "linear-gradient(45deg, #8e44ad, #c0392b)";
-            alert("¡Sesión de cata terminada! Disfruta.");
-        }
-
-        // --- LÓGICA ESCÁNER BATERÍA ---
-        async function scanServices() {
-            if (!serverCache) return alert("Primero conecta el dispositivo");
-            log("--- INICIANDO ESCANEO PROFUNDO ---");
-            
-            try {
-                const service = await serverCache.getPrimaryService(SERVICE_MAIN);
-                const characteristics = await service.getCharacteristics();
-                
-                for (const c of characteristics) {
-                    try {
-                        const val = await c.readValue();
-                        // Intentar leer valor byte simple (0-255)
-                        const intVal = val.getUint8(0); 
-                        // Intentar leer short (como temp)
-                        const shortVal = val.getUint16(0, true);
-
-                        log(`UUID: ...${c.uuid.slice(4, 8)} | Val(8): ${intVal} | Val(16): ${shortVal}`);
-
-                        // Si parece una batería (0-100) y NO es una de las temperaturas
-                        if (intVal > 0 && intVal <= 100 && intVal !== 32) { // 32 suele ser un byte basura
-                            document.getElementById('batDisplay').innerText = intVal + "% (Posible)";
-                            log(`¡ENCONTRADO POSIBLE BATERÍA! UUID termina en: ${c.uuid.slice(4,8)}`);
-                        }
-                    } catch (err) {
-                        log(`UUID Protegido/Escritura: ...${c.uuid.slice(4, 8)}`);
-                    }
-                }
-            } catch (e) {
-                log("Error escaneo: " + e);
-            }
-            log("--- FIN ESCANEO ---");
+            alert("¡Sesión de cata terminada!");
         }
     </script>
 </body>
