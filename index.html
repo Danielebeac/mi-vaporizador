@@ -2,83 +2,88 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CRAFTY+ V11 TRAFFIC</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CRAFTY+ V12 TURBO</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #000; color: #fff; text-align: center; padding: 20px; margin: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
+        /* ESTILO TIPO APP NATIVA */
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #000; color: #fff; text-align: center; padding: 15px; margin: 0; user-select: none; -webkit-tap-highlight-color: transparent; overscroll-behavior: none; }
         
-        /* HEADER */
-        .header { display: flex; justify-content: space-between; align-items: center; max-width: 400px; margin: 0 auto 10px auto; }
-        .logo { font-weight: 900; font-size: 20px; letter-spacing: -1px; }
+        /* HEADER COMPACTO */
+        .header { display: flex; justify-content: space-between; align-items: center; max-width: 400px; margin: 0 auto 15px auto; padding: 0 10px; }
+        .logo { font-weight: 800; font-size: 18px; letter-spacing: -0.5px; }
         .logo span { color: #00e5ff; }
-        .badge { padding: 4px 10px; border-radius: 12px; font-size: 10px; font-weight: bold; background: #333; color: #777; transition: 0.3s; }
-        .badge.online { background: #00ff00; color: #000; box-shadow: 0 0 10px rgba(0,255,0,0.4); }
+        .badge { padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; background: #222; color: #555; letter-spacing: 0.5px; }
+        .badge.online { background: #00ff00; color: #000; box-shadow: 0 0 8px rgba(0,255,0,0.5); }
 
         /* PANTALLAS */
         .screen { max-width: 380px; margin: 0 auto; display: none; }
-        .visible { display: block; animation: fadein 0.5s; }
+        .visible { display: block; animation: fadein 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         
-        .card { background: #161618; border-radius: 24px; padding: 25px; margin-bottom: 15px; border: 1px solid #222; position: relative; overflow: hidden; }
+        .card { background: #111; border-radius: 20px; padding: 20px; margin-bottom: 12px; border: 1px solid #222; position: relative; }
 
-        /* VISUALIZADOR */
-        .temp-val { font-size: 72px; font-weight: 200; line-height: 1; letter-spacing: -3px; }
-        .temp-unit { font-size: 24px; color: #555; position: absolute; top: 35px; }
+        /* VISUALIZADOR PRINCIPAL */
+        .temp-display { position: relative; height: 100px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
+        .temp-val { font-size: 80px; font-weight: 200; line-height: 1; letter-spacing: -4px; font-variant-numeric: tabular-nums; }
+        .temp-unit { font-size: 20px; color: #666; position: absolute; top: 10px; right: 20px; }
         
-        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; padding-top: 20px; border-top: 1px solid #333; }
-        .label { font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 1px; }
-        .val { font-size: 18px; font-weight: 600; }
+        .grid-info { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px; }
+        .mini-stat { background: #1a1a1a; padding: 10px; border-radius: 12px; }
+        .label { font-size: 9px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
+        .val { font-size: 16px; font-weight: 700; }
         .orange { color: #ff9f43; } .green { color: #2ecc71; }
 
-        /* CONTROLES */
-        .slider-container { display: flex; align-items: center; justify-content: space-between; background: #222; border-radius: 16px; padding: 5px; margin-bottom: 15px; }
-        .btn-round { width: 50px; height: 50px; border-radius: 14px; border: none; background: #333; color: #fff; font-size: 24px; cursor: pointer; }
-        .btn-round:active { background: #555; }
-        input[type="number"] { background: transparent; border: none; color: #fff; font-size: 28px; width: 80px; text-align: center; font-weight: bold; }
+        /* CONTROLES FLUIDOS */
+        .control-bar { display: flex; align-items: center; justify-content: space-between; background: #1a1a1a; border-radius: 16px; padding: 6px; margin-bottom: 15px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.5); }
+        
+        .btn-round { width: 55px; height: 55px; border-radius: 12px; border: none; background: #333; color: #fff; font-size: 28px; cursor: pointer; touch-action: manipulation; transition: transform 0.05s, background 0.1s; }
+        .btn-round:active { background: #555; transform: scale(0.92); }
+        
+        input[type="number"] { background: transparent; border: none; color: #fff; font-size: 32px; width: 90px; text-align: center; font-weight: 600; font-family: monospace; }
 
-        .btn-main { width: 100%; border: none; padding: 18px; border-radius: 16px; font-size: 16px; font-weight: 700; cursor: pointer; margin-bottom: 10px; transition: transform 0.1s; }
-        .btn-main:active { transform: scale(0.97); }
+        /* BOTONES DE ACCIÓN */
+        .btn-main { width: 100%; border: none; padding: 16px; border-radius: 14px; font-size: 15px; font-weight: 700; cursor: pointer; margin-bottom: 8px; transition: all 0.1s; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-main:active { transform: scale(0.98); filter: brightness(0.9); }
         
         .btn-heat { background: linear-gradient(135deg, #ff6b6b, #ee5253); color: white; }
         .btn-boost { background: linear-gradient(135deg, #feca57, #ff9f43); color: #000; }
-        .btn-cata { background: linear-gradient(135deg, #a55eea, #8854d0); color: white; }
-        .btn-stop { background: #2d3436; color: #ccc; }
-        .btn-disco { background: transparent; border: 1px solid #444; color: #666; font-size: 12px; padding: 10px; margin-top: 10px; }
-        
-        .cata-status { font-size: 13px; color: #a55eea; margin-top: 5px; font-weight: bold; height: 20px; margin-bottom: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
-        .loading-text { font-size: 12px; color: #ff9f43; display: none; margin-bottom: 10px;}
+        .btn-cata { background: linear-gradient(135deg, #5f27cd, #341f97); color: white; }
+        .btn-stop { background: #2d3436; color: #aaa; }
+        .btn-disco { background: transparent; border: 1px solid #333; color: #555; font-size: 11px; padding: 12px; margin-top: 15px; }
 
-        @keyframes fadein { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .status-text { font-size: 12px; color: #6c5ce7; font-weight: 600; height: 20px; margin: 5px 0; }
+
+        @keyframes fadein { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <div class="logo">CRAFTY<span>+</span></div>
+        <div class="logo">CRAFTY<span>+</span> V12</div>
         <div id="statusBadge" class="badge">OFFLINE</div>
     </div>
 
     <div id="view-connect" class="screen visible">
-        <div class="card" style="padding: 50px 20px;">
-            <div style="font-size: 50px; margin-bottom: 20px;">🔌</div>
-            <p style="color: #666; margin-bottom: 30px;">Conecta para iniciar V11 Traffic Control.</p>
-            <button class="btn-main btn-heat" onclick="conectar()">CONECTAR</button>
+        <div class="card" style="padding: 60px 20px; margin-top: 40px;">
+            <div style="font-size: 60px; margin-bottom: 20px;">⚡</div>
+            <p style="color: #666; font-size: 14px; line-height: 1.5;">Modo Turbo Nativo<br>Conexión de baja latencia</p>
+            <button class="btn-main btn-heat" style="margin-top: 30px;" onclick="conectar()">INICIAR SISTEMA</button>
         </div>
     </div>
 
     <div id="view-app" class="screen">
         
         <div class="card">
-            <div style="position: relative; display: inline-block;">
+            <div class="temp-display">
                 <span id="tempActual" class="temp-val">--</span>
                 <span class="temp-unit">°C</span>
             </div>
             
-            <div class="info-grid">
-                <div>
+            <div class="grid-info">
+                <div class="mini-stat">
                     <div class="label">OBJETIVO</div>
                     <div id="tempTarget" class="val orange">--°C</div>
                 </div>
-                <div>
+                <div class="mini-stat">
                     <div class="label">BATERÍA</div>
                     <div id="batteryLevel" class="val green">--%</div>
                 </div>
@@ -86,29 +91,34 @@
         </div>
 
         <div class="card">
-            <div id="trafficLight" class="loading-text">📡 ENVIANDO COMANDO...</div>
+            <div id="statusText" class="status-text"></div>
 
-            <div class="slider-container">
-                <button class="btn-round" onclick="ajustarSmart(-1)">-</button>
+            <div class="control-bar">
+                <button class="btn-round" onclick="cambioRapido(-1)">-</button>
                 <input type="number" id="inputTemp" value="180" readonly>
-                <button class="btn-round" onclick="ajustarSmart(1)">+</button>
+                <button class="btn-round" onclick="cambioRapido(1)">+</button>
             </div>
             
-            <button class="btn-main btn-heat" onclick="manualEncender()">🔥 FIJAR / ACTUALIZAR</button>
-            <button class="btn-main btn-boost" onclick="activarBoost()">⚡ BOOST (+15°C)</button>
+            <button class="btn-main btn-heat" onclick="accionEncender()">
+                <span>🔥</span> FIJAR TEMPERATURA
+            </button>
+            <button class="btn-main btn-boost" onclick="accionBoost()">
+                <span>⚡</span> BOOST (+15°C)
+            </button>
             
-            <hr style="border-color:#333; margin: 15px 0;">
+            <hr style="border-color:#222; margin: 15px 0;">
             
-            <div id="cataInfo" class="cata-status"></div>
-            <button id="btnCata" class="btn-main btn-cata" onclick="iniciarCatadorRobust()">🍷 MODO CATADOR</button>
+            <button id="btnCata" class="btn-main btn-cata" onclick="iniciarCataV12()">
+                <span>🍷</span> MODO CATADOR
+            </button>
             
-            <button class="btn-main btn-stop" onclick="apagarTotal()">❄️ DETENER CALENTADOR</button>
-            <button class="btn-main btn-disco" onclick="desconectar()">🔌 DESCONECTAR</button>
+            <button class="btn-main btn-stop" onclick="accionApagar()">❄️ APAGAR</button>
+            <button class="btn-main btn-disco" onclick="desconectar()">DESCONECTAR</button>
         </div>
     </div>
 
     <script>
-        // --- CONSTANTES ---
+        // --- CONFIGURACIÓN TÉCNICA ---
         const UUID = {
             MAIN:   '00000001-4c45-4b43-4942-265a524f5453',
             ACTUAL: '00000011-4c45-4b43-4942-265a524f5453',
@@ -118,208 +128,212 @@
             OFF:    '00000091-4c45-4b43-4942-265a524f5453'
         };
 
-        let device = null;
-        let char = {};
-        let loop = null;
-        let cataRunning = false;
-        
-        // --- CONTROL DE TRÁFICO (NUEVO) ---
-        let isBusy = false; // "Semáforo" para pausar lecturas
-        let debounceTimer = null; // Temporizador para botones manuales
+        let device, char = {}, loop, cataRun = false;
+        let isWriting = false; 
+        let debounceTimer = null;
 
-        // --- CONEXIÓN ---
+        // --- SISTEMA ---
         async function conectar() {
             try {
                 device = await navigator.bluetooth.requestDevice({
                     filters: [{ namePrefix: 'STORZ' }],
                     optionalServices: [UUID.MAIN]
                 });
-
                 device.addEventListener('gattserverdisconnected', onDisconnect);
+                
                 const server = await device.gatt.connect();
                 const service = await server.getPrimaryService(UUID.MAIN);
 
-                char.actual = await service.getCharacteristic(UUID.ACTUAL);
-                char.target = await service.getCharacteristic(UUID.TARGET);
-                char.batt   = await service.getCharacteristic(UUID.BATT);
-                char.on     = await service.getCharacteristic(UUID.ON);
-                char.off    = await service.getCharacteristic(UUID.OFF);
+                // Carga paralela para mayor velocidad
+                const promesas = [
+                    service.getCharacteristic(UUID.ACTUAL).then(c => char.actual = c),
+                    service.getCharacteristic(UUID.TARGET).then(c => char.target = c),
+                    service.getCharacteristic(UUID.BATT).then(c => char.batt = c),
+                    service.getCharacteristic(UUID.ON).then(c => char.on = c),
+                    service.getCharacteristic(UUID.OFF).then(c => char.off = c)
+                ];
+                await Promise.all(promesas);
 
-                document.getElementById('view-connect').classList.remove('visible');
-                document.getElementById('view-app').classList.add('visible');
-                document.getElementById('statusBadge').innerText = "ONLINE";
-                document.getElementById('statusBadge').classList.add('online');
+                uiConnected();
+                // Polling más rápido (800ms)
+                loop = setInterval(leerDatos, 800);
 
-                // Iniciamos bucle de lectura
-                loop = setInterval(leerDatos, 1000);
-
-            } catch (e) { alert("Error: " + e); }
+            } catch (e) { console.log(e); }
         }
 
-        function desconectar() {
-            if (device && device.gatt.connected) device.gatt.disconnect();
-            else onDisconnect();
+        function uiConnected() {
+            document.getElementById('view-connect').classList.remove('visible');
+            document.getElementById('view-app').classList.add('visible');
+            document.getElementById('statusBadge').innerText = "ONLINE";
+            document.getElementById('statusBadge').classList.add('online');
         }
 
         function onDisconnect() {
             clearInterval(loop);
-            cataRunning = false;
-            location.reload(); 
+            cataRun = false;
+            location.reload();
         }
 
-        // --- LECTURA DE DATOS (CON SEMÁFORO) ---
+        function desconectar() {
+            if(device?.gatt?.connected) device.gatt.disconnect();
+            else onDisconnect();
+        }
+
+        // --- LECTURA OPTIMIZADA ---
         async function leerDatos() {
-            // Si estamos escribiendo (Busy), NO leemos para evitar choques
-            if (isBusy || !char.actual) return; 
+            if(isWriting || !char.actual) return; // Si estamos escribiendo, no leemos (Semáforo estricto)
+            
+            try {
+                // Lectura paralela (más rápido)
+                const [vT, vO, vB] = await Promise.all([
+                    char.actual.readValue(),
+                    char.target.readValue(),
+                    char.batt.readValue()
+                ]);
+
+                document.getElementById('tempActual').innerText = (vT.getUint16(0, true)/10).toFixed(1);
+                
+                // Solo actualizamos el objetivo visual si NO estamos editándolo manualmente
+                const objetivoReal = vO.getUint16(0, true)/10;
+                document.getElementById('tempTarget').innerText = objetivoReal > 0 ? objetivoReal + "°C" : "OFF";
+                document.getElementById('batteryLevel').innerText = vB.getUint16(0, true) + "%";
+                
+            } catch(e) {}
+        }
+
+        // --- INTERACCIÓN "UI OPTIMISTA" (El secreto de la velocidad) ---
+        function cambioRapido(delta) {
+            const input = document.getElementById('inputTemp');
+            let nuevoValor = parseInt(input.value) + delta;
+            
+            // Límites
+            if(nuevoValor > 210) nuevoValor = 210;
+            if(nuevoValor < 40) nuevoValor = 40;
+
+            // 1. ACTUALIZACIÓN VISUAL INSTANTÁNEA
+            input.value = nuevoValor;
+            
+            // 2. ENVÍO "FIRE & FORGET" (Con Debounce corto 300ms)
+            if(debounceTimer) clearTimeout(debounceTimer);
+            
+            debounceTimer = setTimeout(() => {
+                enviarComandoSilencioso(nuevoValor); 
+            }, 300);
+        }
+
+        // Envía sin bloquear la UI ni vibrar, solo actualiza el backend
+        async function enviarComandoSilencioso(temp) {
+            isWriting = true;
+            try {
+                await write(char.target, temp * 10);
+                // Opcional: Escribir ON para asegurar que despierte
+                await write(char.on, 1);
+            } catch(e) { console.log("Error envío rápido"); }
+            isWriting = false;
+        }
+
+        // Acción completa del botón (con vibración y feedback)
+        async function accionEncender(valOverride = null) {
+            const val = valOverride || document.getElementById('inputTemp').value;
+            
+            document.getElementById('statusText').innerText = "Enviando...";
+            isWriting = true; // Bloqueo de lectura
 
             try {
-                const vT = await char.actual.readValue();
-                document.getElementById('tempActual').innerText = (vT.getUint16(0, true) / 10).toFixed(1);
-
-                const vO = await char.target.readValue();
-                const o = vO.getUint16(0, true) / 10;
-                document.getElementById('tempTarget').innerText = o > 0 ? o + "°C" : "OFF";
-
-                const vB = await char.batt.readValue();
-                document.getElementById('batteryLevel').innerText = vB.getUint16(0, true) + "%";
-            } catch (e) {}
-        }
-
-        // --- CONTROL MANUAL INTELIGENTE (DEBOUNCE) ---
-        function ajustarSmart(delta) {
-            const input = document.getElementById('inputTemp');
-            let val = parseInt(input.value) + delta;
-            if (val > 210) val = 210;
-            if (val < 40) val = 40;
-            input.value = val;
-            
-            // 1. Cancelamos envío anterior si el usuario sigue pulsando
-            if (debounceTimer) clearTimeout(debounceTimer);
-
-            // 2. Esperamos 500ms a que deje de pulsar
-            debounceTimer = setTimeout(() => {
-                manualEncender(val);
-            }, 500);
-        }
-
-        // FUNCIÓN MAESTRA DE ENVÍO ROBUSTO
-        async function enviarTemperaturaSegura(grados) {
-            isBusy = true; // 🔴 SEMÁFORO ROJO: Pausar lecturas
-            document.getElementById('trafficLight').style.display = 'block';
-
-            let intentos = 0;
-            let exito = false;
-
-            while (intentos < 3 && !exito) {
-                try {
-                    // 1. Enviar Target
-                    await write(char.target, grados * 10);
-                    // 2. Encender (Confirmar orden)
-                    await write(char.on, 1);
-                    
-                    await new Promise(r => setTimeout(r, 600));
-
-                    // 3. Verificación
-                    const lectura = await char.target.readValue();
-                    const leido = lectura.getUint16(0, true) / 10;
-
-                    if (Math.abs(leido - grados) < 1) exito = true; 
-                    else console.log(`Reintentando... Leído: ${leido}`);
-
-                } catch (e) { console.log(e); }
-                intentos++;
+                // Doble confirmación
+                await write(char.target, val * 10);
+                await write(char.on, 1);
+                
+                document.getElementById('statusText').innerText = `Fijado a ${val}°C`;
+                if(navigator.vibrate) navigator.vibrate(50);
+                
+            } catch(e) { 
+                document.getElementById('statusText').innerText = "Error de envío";
             }
             
-            document.getElementById('trafficLight').style.display = 'none';
-            isBusy = false; // 🟢 SEMÁFORO VERDE: Reanudar lecturas
-            return exito;
+            setTimeout(() => { isWriting = false; document.getElementById('statusText').innerText = ""; }, 500);
         }
 
-        async function manualEncender(tempOverride = null) {
-            const val = tempOverride || document.getElementById('inputTemp').value;
-            await enviarTemperaturaSegura(val);
-            if(navigator.vibrate) navigator.vibrate(50);
-        }
-
-        async function activarBoost() {
+        async function accionBoost() {
             let actual = parseInt(document.getElementById('inputTemp').value);
-            let boostTemp = actual + 15;
-            if (boostTemp > 210) boostTemp = 210;
-            document.getElementById('inputTemp').value = boostTemp;
-            await manualEncender(boostTemp);
-            alert(`🚀 BOOST: ${boostTemp}°C`);
+            let target = Math.min(actual + 15, 210);
+            
+            document.getElementById('inputTemp').value = target; // Update visual
+            await accionEncender(target);
+            alert(`🚀 BOOST: ${target}°C`);
         }
 
-        // --- MODO CATADOR ROBUST ---
-        async function iniciarCatadorRobust() {
-            if (cataRunning) return; 
-            cataRunning = true;
+        async function accionApagar() {
+            cataRun = false;
+            document.getElementById('statusText').innerText = "Apagando...";
+            isWriting = true;
+            try {
+                await write(char.off, 1);
+                await write(char.target, 0);
+            } catch(e) {}
+            isWriting = false;
+        }
 
+        // --- MODO CATADOR V12 (SIN FALLOS) ---
+        async function iniciarCataV12() {
+            if(cataRun) return;
+            cataRun = true;
+            
             const pasos = [175, 185, 195];
-            const tiempoSesion = 45; 
             const btn = document.getElementById('btnCata');
-            const info = document.getElementById('cataInfo');
+            const status = document.getElementById('statusText');
+            
+            btn.style.background = "#333";
+            btn.innerHTML = "<span>⛔</span> DETENER CATA";
+            btn.onclick = () => location.reload();
 
-            btn.style.background = "#444";
-            btn.innerText = "⛔ DETENER";
-            btn.onclick = () => { location.reload(); };
-
-            for (let i = 0; i < pasos.length; i++) {
-                if (!cataRunning) break;
-                const target = pasos[i];
-                info.innerText = `Paso ${i+1}/${pasos.length}: Enviando ${target}°C...`;
-                document.getElementById('inputTemp').value = target;
-
-                // Usamos la función segura con semáforo
-                await enviarTemperaturaSegura(target);
+            for(let i=0; i<pasos.length; i++) {
+                if(!cataRun) break;
+                const T = pasos[i];
                 
-                info.innerText = `Subiendo a ${target}°C...`;
-                await esperarLlegadaTemperatura(target);
+                // 1. Enviar
+                status.innerText = `Paso ${i+1}: Subiendo a ${T}°C`;
+                document.getElementById('inputTemp').value = T;
+                await accionEncender(T);
 
-                if (!cataRunning) break;
+                // 2. Esperar llegada (Polling interno)
+                await esperarTemp(T);
+                if(!cataRun) break;
 
-                for (let s = tiempoSesion; s > 0; s--) {
-                    if (!cataRunning) break;
-                    info.innerText = `🔥 Saboreando ${target}°C - Quedan ${s}s`;
+                // 3. Cuenta atrás
+                for(let s=45; s>0; s--) {
+                    if(!cataRun) break;
+                    status.innerText = `🔥 ${T}°C - Quedan ${s}s`;
                     await new Promise(r => setTimeout(r, 1000));
                 }
             }
-
-            if (cataRunning) {
-                info.innerText = "✅ ¡Fin de Sesión!";
-                alert("Modo Catador Terminado");
-                cataRunning = false;
-                btn.style.background = ""; 
-                btn.innerText = "🍷 MODO CATADOR";
-                btn.onclick = iniciarCatadorRobust;
+            
+            if(cataRun) {
+                status.innerText = "¡Cata Finalizada!";
+                alert("Sesión Terminada");
+                cataRun = false;
+                btn.style.background = "";
+                btn.innerHTML = "<span>🍷</span> MODO CATADOR";
+                btn.onclick = iniciarCataV12;
             }
         }
 
-        async function esperarLlegadaTemperatura(meta) {
+        async function esperarTemp(meta) {
             return new Promise(resolve => {
-                let intentos = 0;
+                let safety = 0;
                 const check = setInterval(() => {
-                    intentos++;
-                    const actual = parseFloat(document.getElementById('tempActual').innerText);
-                    
-                    if (!cataRunning) { clearInterval(check); resolve(); return; }
-
-                    if (actual >= (meta - 3)) { clearInterval(check); resolve(); }
-                    if (intentos > 90) { clearInterval(check); resolve(); } // Timeout
+                    safety++;
+                    const curr = parseFloat(document.getElementById('tempActual').innerText);
+                    // Margen de 3 grados o timeout de 90s
+                    if(!cataRun || curr >= (meta - 3) || safety > 90) {
+                        clearInterval(check);
+                        resolve();
+                    }
                 }, 1000);
             });
         }
 
-        async function apagarTotal() {
-            cataRunning = false;
-            document.getElementById('cataInfo').innerText = "Detenido.";
-            
-            isBusy = true; // Pausar lecturas para apagar bien
-            await write(char.off, 1);
-            await write(char.target, 0);
-            isBusy = false;
-        }
-
+        // Helper
         async function write(c, v) {
             if(!c) return;
             const b = new ArrayBuffer(2);
