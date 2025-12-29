@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Control Crafty+ / Mighty+</title>
+    <title>Control Crafty+ (Modo Universal)</title>
     <style>
-        /* ESTILOS: Diseño oscuro similar a tu app */
         body {
             background-color: #0d0d0d;
             color: #ffffff;
@@ -17,7 +16,6 @@
             height: 100vh;
             margin: 0;
         }
-
         .card {
             background-color: #1a1a1a;
             border: 1px solid #333;
@@ -29,28 +27,12 @@
             text-align: center;
             box-shadow: 0 4px 8px rgba(0,0,0,0.5);
         }
-
-        h2 {
-            color: #00ffcc; /* Color verdoso de tus textos */
-            font-size: 16px;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-        }
-
-        .big-text {
-            font-size: 48px;
-            font-weight: bold;
-            color: white;
-        }
-
-        .status-label {
-            color: #888;
-            font-size: 14px;
-        }
-
-        /* Botón Naranja Principal */
+        h2 { color: #00ffcc; font-size: 16px; margin-bottom: 10px; text-transform: uppercase; }
+        .big-text { font-size: 48px; font-weight: bold; color: white; }
+        .status-label { color: #888; font-size: 14px; }
+        
         .btn-action {
-            background-color: #e67e22; /* Naranja */
+            background-color: #e67e22;
             color: white;
             border: none;
             padding: 15px 30px;
@@ -61,12 +43,8 @@
             width: 100%;
             margin-top: 10px;
         }
-
-        .btn-action:active {
-            background-color: #d35400;
-        }
-
-        /* Botón Conectar */
+        .btn-action:active { background-color: #d35400; }
+        
         .btn-connect {
             background: linear-gradient(90deg, #8e44ad, #c0392b);
             color: white;
@@ -96,9 +74,9 @@
 
     <div class="card">
         <button id="btnConnect" class="btn-connect" onclick="conectarDispositivo()">
-            ▶ INICIAR CONEXIÓN
+            ▶ BUSCAR DISPOSITIVOS
         </button>
-        <div id="statusConnection" class="status-label">Desconectado</div>
+        <div id="statusConnection" class="status-label">Esperando acción...</div>
     </div>
 
     <div class="card">
@@ -126,120 +104,68 @@
     </div>
 
     <script>
-        // --- CONSTANTES DE UUID (STORZ & BICKEL) ---
+        // --- CONSTANTES ---
         const SERVICE_UUID = '00000001-5354-4f52-5a26-4249434b454c';
-        
-        // Características Específicas
-        const CHAR_TEMP_ACTUAL  = '00000011-5354-4f52-5a26-4249434b454c'; // Lectura (Read/Notify)
-        const CHAR_TEMP_TARGET  = '00000021-5354-4f52-5a26-4249434b454c'; // Escritura (Write)
-        const CHAR_BATTERY      = '00000003-5354-4f52-5a26-4249434b454c'; // Lectura (Read)
+        const CHAR_BATTERY = '00000003-5354-4f52-5a26-4249434b454c';
+        const CHAR_TEMP_ACTUAL = '00000011-5354-4f52-5a26-4249434b454c';
+        const CHAR_TEMP_TARGET = '00000021-5354-4f52-5a26-4249434b454c';
 
-        // Variables globales para guardar las referencias
-        let deviceCache = null;
-        let charTargetTemp = null; // Aquí escribiremos para "Encender"
+        let charTargetTemp = null;
 
-        // 1. FUNCIÓN PARA CONECTAR
         async function conectarDispositivo() {
             try {
-                console.log('Buscando dispositivos Storz & Bickel...');
+                document.getElementById('statusConnection').innerText = "Abriendo escáner...";
                 
+                // CAMBIO IMPORTANTE: acceptAllDevices: true
+                // Esto mostrará TODOS los dispositivos Bluetooth cercanos.
+                // Tú debes seleccionar manualmente el que diga "STORZ&BICKEL" o "CRAFTY"
                 const device = await navigator.bluetooth.requestDevice({
-                    filters: [{ services: [SERVICE_UUID] }]
+                    acceptAllDevices: true,
+                    optionalServices: [SERVICE_UUID]
                 });
 
-                deviceCache = device;
                 document.getElementById('statusConnection').innerText = "Conectando...";
                 
-                // Conectar al servidor GATT
                 const server = await device.gatt.connect();
                 console.log('Conectado al servidor GATT');
 
-                // Obtener el Servicio Principal
-                const service = await server.getPrimaryService(SERVICE_UUID);
+                // Intentar obtener el servicio
+                let service;
+                try {
+                    service = await server.getPrimaryService(SERVICE_UUID);
+                } catch (e) {
+                    alert("Dispositivo conectado, pero no parece ser un Crafty/Mighty original o el servicio no está disponible.");
+                    console.error(e);
+                    return;
+                }
 
-                // --- A. OBTENER CARACTERÍSTICA DE BATERÍA (Solución a tu error de lectura) ---
+                // 1. Leer Batería
                 try {
                     const batteryChar = await service.getCharacteristic(CHAR_BATTERY);
                     const value = await batteryChar.readValue();
-                    // La batería suele venir en el primer byte o como entero corto
-                    const porcentaje = value.getUint16(0, true); // true = Little Endian
+                    const porcentaje = value.getUint16(0, true); 
                     document.getElementById('batteryLevel').innerText = porcentaje;
-                    console.log("Batería detectada:", porcentaje);
                 } catch (err) {
-                    console.error("Error leyendo batería:", err);
-                    document.getElementById('batteryLevel').innerText = "Err";
+                    console.log("Intentando lectura alternativa de batería...");
+                    // Fallback para modelos antiguos (a veces es Uint8)
+                    try {
+                        const batteryChar = await service.getCharacteristic(CHAR_BATTERY);
+                        const value = await batteryChar.readValue();
+                        const porcentaje = value.getUint8(0); 
+                        document.getElementById('batteryLevel').innerText = porcentaje;
+                    } catch(e2) {
+                        document.getElementById('batteryLevel').innerText = "?";
+                    }
                 }
 
-                // --- B. OBTENER TEMPERATURA ACTUAL (Para mostrar en pantalla) ---
+                // 2. Temp Actual (Notificaciones)
                 try {
                     const tempChar = await service.getCharacteristic(CHAR_TEMP_ACTUAL);
                     await tempChar.startNotifications();
                     tempChar.addEventListener('characteristicvaluechanged', (event) => {
                         const val = event.target.value;
-                        const temp = val.getUint16(0, true) / 10; // Dividir por 10
+                        const temp = val.getUint16(0, true) / 10;
                         document.getElementById('tempActual').innerText = temp.toFixed(1);
                     });
-                    console.log("Notificaciones de temperatura activadas");
                 } catch (err) {
-                    console.error("Error leyendo temp actual:", err);
-                }
-
-                // --- C. OBTENER CONTROL (Para el botón de encendido) ---
-                charTargetTemp = await service.getCharacteristic(CHAR_TEMP_TARGET);
-                
-                document.getElementById('statusConnection').innerText = "CONECTADO: " + device.name;
-                document.getElementById('btnConnect').style.display = 'none';
-
-            } catch (error) {
-                console.error('Error de conexión:', error);
-                alert('No se pudo conectar. Asegúrate de usar Chrome/Bluefy y tener Bluetooth activo.');
-            }
-        }
-
-        // 2. FUNCIÓN PARA "ENCENDER" (Fijar Temperatura)
-        async function fijarTemperatura() {
-            if (!charTargetTemp) {
-                alert("¡Primero conecta el dispositivo!");
-                return;
-            }
-
-            const grados = document.getElementById('inputTemp').value;
-            
-            try {
-                // El truco: Multiplicar por 10 y enviar como Uint16 Little Endian
-                const valorEnviar = grados * 10;
-                
-                const buffer = new ArrayBuffer(2);
-                const view = new DataView(buffer);
-                view.setUint16(0, valorEnviar, true); // Little Endian es CLAVE
-
-                await charTargetTemp.writeValue(buffer);
-                
-                console.log(`Comando enviado: Calentar a ${grados}°C`);
-                alert(`Iniciando calentamiento a ${grados}°C`);
-                
-            } catch (error) {
-                console.error("Error al enviar temperatura:", error);
-                alert("Error al intentar calentar.");
-            }
-        }
-
-        // 3. FUNCIÓN PARA DETENER
-        async function detenerCalentamiento() {
-            if (!charTargetTemp) return;
-            
-            try {
-                // Enviar 0 detiene el calentador
-                const buffer = new ArrayBuffer(2);
-                const view = new DataView(buffer);
-                view.setUint16(0, 0, true); 
-
-                await charTargetTemp.writeValue(buffer);
-                alert("Calentamiento detenido (Standby)");
-            } catch (error) {
-                console.error(error);
-            }
-        }
-    </script>
-</body>
-</html>
+                    console.error("Error temp actual", err);
