@@ -3,23 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CRAFTY+ SMART v7</title>
+    <title>CRAFTY+ V8 STABLE</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #000; color: #fff; text-align: center; padding: 20px; margin: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
         
+        /* HEADER */
         .header { display: flex; justify-content: space-between; align-items: center; max-width: 400px; margin: 0 auto 10px auto; }
         .logo { font-weight: 900; font-size: 20px; letter-spacing: -1px; }
         .logo span { color: #00e5ff; }
-        
         .badge { padding: 4px 10px; border-radius: 12px; font-size: 10px; font-weight: bold; background: #333; color: #777; transition: 0.3s; }
         .badge.online { background: #00ff00; color: #000; box-shadow: 0 0 10px rgba(0,255,0,0.4); }
 
+        /* PANTALLAS */
         .screen { max-width: 380px; margin: 0 auto; display: none; }
         .visible { display: block; animation: fadein 0.5s; }
         
         .card { background: #161618; border-radius: 24px; padding: 25px; margin-bottom: 15px; border: 1px solid #222; position: relative; overflow: hidden; }
 
-        /* TEMP */
+        /* VISUALIZADOR */
         .temp-val { font-size: 72px; font-weight: 200; line-height: 1; letter-spacing: -3px; }
         .temp-unit { font-size: 24px; color: #555; position: absolute; top: 35px; }
         
@@ -40,9 +41,9 @@
         .btn-heat { background: linear-gradient(135deg, #ff6b6b, #ee5253); color: white; }
         .btn-cata { background: linear-gradient(135deg, #a55eea, #8854d0); color: white; }
         .btn-stop { background: #2d3436; color: #ccc; }
+        .btn-disco { background: transparent; border: 1px solid #444; color: #666; font-size: 12px; padding: 10px; margin-top: 10px; }
         
-        /* Estado Catador */
-        .cata-status { font-size: 12px; color: #a55eea; margin-top: 5px; font-weight: bold; height: 15px;}
+        .cata-status { font-size: 14px; color: #a55eea; margin-top: 5px; font-weight: bold; height: 20px; margin-bottom: 10px;}
 
         @keyframes fadein { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
@@ -57,7 +58,7 @@
     <div id="view-connect" class="screen visible">
         <div class="card" style="padding: 50px 20px;">
             <div style="font-size: 50px; margin-bottom: 20px;">🔌</div>
-            <p style="color: #666; margin-bottom: 30px;">Conecta para iniciar el control inteligente v7.</p>
+            <p style="color: #666; margin-bottom: 30px;">Conecta para iniciar V8 Stable.</p>
             <button class="btn-main btn-heat" onclick="conectar()">CONECTAR</button>
         </div>
     </div>
@@ -93,10 +94,12 @@
             
             <hr style="border-color:#333; margin: 15px 0;">
             
-            <button id="btnCata" class="btn-main btn-cata" onclick="iniciarCatadorSmart()">🍷 MODO CATADOR (SMART)</button>
             <div id="cataInfo" class="cata-status"></div>
+            <button id="btnCata" class="btn-main btn-cata" onclick="iniciarCatadorSmart()">🍷 MODO CATADOR (SMART)</button>
             
-            <button class="btn-main btn-stop" onclick="apagarTotal()">❄️ DETENER TODO</button>
+            <button class="btn-main btn-stop" onclick="apagarTotal()">❄️ DETENER CALENTADOR</button>
+
+            <button class="btn-main btn-disco" onclick="desconectar()">🔌 DESCONECTAR BLUETOOTH</button>
         </div>
     </div>
 
@@ -105,17 +108,16 @@
         const UUID = {
             MAIN:   '00000001-4c45-4b43-4942-265a524f5453',
             ACTUAL: '00000011-4c45-4b43-4942-265a524f5453',
-            TARGET: '00000021-4c45-4b43-4942-265a524f5453', // Para escribir temperatura
+            TARGET: '00000021-4c45-4b43-4942-265a524f5453',
             BATT:   '00000041-4c45-4b43-4942-265a524f5453',
-            ON:     '00000081-4c45-4b43-4942-265a524f5453', // Botón de arranque
-            OFF:    '00000091-4c45-4b43-4942-265a524f5453'  // Botón de paro
+            ON:     '00000081-4c45-4b43-4942-265a524f5453',
+            OFF:    '00000091-4c45-4b43-4942-265a524f5453'
         };
 
-        // VARIABLES
         let device = null;
         let char = {};
         let loop = null;
-        let cataRunning = false; // Para saber si el catador está activo
+        let cataRunning = false;
 
         // --- CONEXIÓN ---
         async function conectar() {
@@ -145,99 +147,97 @@
             } catch (e) { alert("Error: " + e); }
         }
 
+        function desconectar() {
+            if (device && device.gatt.connected) {
+                device.gatt.disconnect();
+            } else {
+                onDisconnect();
+            }
+        }
+
         function onDisconnect() {
             clearInterval(loop);
             cataRunning = false;
-            location.reload(); // Recargar página para limpiar
+            location.reload(); 
         }
 
-        // --- LECTURA CONSTANTE ---
+        // --- LECTURA DE DATOS ---
         async function leerDatos() {
             if (!char.actual) return;
             try {
-                // Temp Actual
                 const vT = await char.actual.readValue();
                 const t = vT.getUint16(0, true) / 10;
                 document.getElementById('tempActual').innerText = t.toFixed(1);
 
-                // Temp Objetivo (Lo que dice el vape)
                 const vO = await char.target.readValue();
                 const o = vO.getUint16(0, true) / 10;
                 document.getElementById('tempTarget').innerText = o > 0 ? o + "°C" : "OFF";
 
-                // Batería
                 const vB = await char.batt.readValue();
                 const b = vB.getUint16(0, true);
                 document.getElementById('batteryLevel').innerText = b + "%";
             } catch (e) {}
         }
 
-        // --- CONTROL MANUAL (CORREGIDO) ---
+        // --- CONTROL MANUAL ---
         async function ajustar(delta) {
             const input = document.getElementById('inputTemp');
             let val = parseInt(input.value) + delta;
-            // Límites
             if (val > 210) val = 210;
             if (val < 40) val = 40;
             input.value = val;
             
-            // ¡ENVÍO INMEDIATO AL PULSAR + o -!
-            // Esto soluciona que "no cambiaba"
+            // Envío rápido para sentir agilidad
             if (char.target) {
-                try {
-                    await write(char.target, val * 10);
-                    // Opcional: Si el vape está "dormido", esto actualiza el número
-                    // pero no enciende el calentador hasta que pulses Encender.
-                    // Si quieres que + y - enciendan el vape directo, descomenta esto:
-                    // await write(char.on, 1); 
-                } catch(e) {}
+                try { await write(char.target, val * 10); } catch(e) {}
             }
         }
 
-        async function manualEncender() {
-            const val = document.getElementById('inputTemp').value;
+        async function manualEncender(tempOverride = null) {
+            const val = tempOverride || document.getElementById('inputTemp').value;
             // 1. Escribir Target
             await write(char.target, val * 10);
-            // 2. Darle al botón ON (UUID 81)
+            // 2. Botón ON
             await write(char.on, 1);
-            
-            // Vibración táctil si es celular
             if(navigator.vibrate) navigator.vibrate(50);
         }
 
-        // --- MODO CATADOR INTELIGENTE (CORREGIDO) ---
+        // --- MODO CATADOR (LÓGICA CORREGIDA) ---
         async function iniciarCatadorSmart() {
-            if (cataRunning) return; // Evitar doble clic
+            if (cataRunning) return; 
             cataRunning = true;
 
             const pasos = [175, 185, 195];
-            const tiempoSesion = 45; // Segundos que dura CADA temperatura
+            const tiempoSesion = 45; 
             const btn = document.getElementById('btnCata');
             const info = document.getElementById('cataInfo');
 
             btn.style.background = "#444";
             btn.innerText = "⛔ DETENER CATADOR";
-            btn.onclick = () => { location.reload(); }; // Botón de pánico recarga la página
+            btn.onclick = () => { location.reload(); };
 
             for (let i = 0; i < pasos.length; i++) {
                 if (!cataRunning) break;
                 
                 const target = pasos[i];
-                info.innerText = `Paso ${i+1}: Subiendo a ${target}°C... (Espera)`;
+                info.innerText = `Paso ${i+1}/${pasos.length}: Subiendo a ${target}°C...`;
                 
-                // 1. Enviar orden
+                // 1. Forzamos el envío de la NUEVA temperatura
                 document.getElementById('inputTemp').value = target;
-                await manualEncender();
+                
+                // IMPORTANTE: Pausa pequeña antes de enviar para no saturar
+                await new Promise(r => setTimeout(r, 500));
+                await manualEncender(target); 
 
-                // 2. ESPERA INTELIGENTE: No avanzar hasta llegar a la temperatura
+                // 2. Esperar a llegar (con margen de 2 grados)
                 await esperarLlegadaTemperatura(target);
 
                 if (!cataRunning) break;
 
-                // 3. AHORA SÍ, CONTAR TIEMPO
+                // 3. Cuenta regresiva
                 for (let s = tiempoSesion; s > 0; s--) {
                     if (!cataRunning) break;
-                    info.innerText = `🔥 Disfruta ${target}°C - Quedan ${s}s`;
+                    info.innerText = `🔥 Saboreando ${target}°C - Quedan ${s}s`;
                     await new Promise(r => setTimeout(r, 1000));
                 }
             }
@@ -245,26 +245,25 @@
             if (cataRunning) {
                 info.innerText = "✅ ¡Sesión Finalizada!";
                 alert("Modo Catador Terminado");
+                // Reset visual
                 cataRunning = false;
                 btn.style.background = ""; 
                 btn.innerText = "🍷 MODO CATADOR (SMART)";
                 btn.onclick = iniciarCatadorSmart;
+                info.innerText = "";
             }
         }
 
-        // Función auxiliar que bloquea el código hasta que el vape calienta
         async function esperarLlegadaTemperatura(meta) {
             return new Promise(resolve => {
                 const check = setInterval(() => {
-                    // Leemos el valor actual del HTML (que se actualiza solo cada segundo)
                     const actual = parseFloat(document.getElementById('tempActual').innerText);
-                    
                     if (!cataRunning) { clearInterval(check); resolve(); }
 
-                    // Si ya llegamos (con margen de 2 grados)
-                    if (actual >= (meta - 2)) {
+                    // Si estamos cerca (margen de error 3 grados por si fluctúa)
+                    if (actual >= (meta - 3)) {
                         clearInterval(check);
-                        resolve(); // Liberar el bloqueo
+                        resolve();
                     }
                 }, 1000);
             });
