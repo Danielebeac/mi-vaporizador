@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Control Crafty+ (Modo Universal)</title>
+    <title>S&B Web Controller</title>
     <style>
         body {
             background-color: #0d0d0d;
@@ -12,8 +12,8 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
-            height: 100vh;
+            padding-top: 20px;
+            min-height: 100vh;
             margin: 0;
         }
         .card {
@@ -25,26 +25,7 @@
             width: 90%;
             max-width: 400px;
             text-align: center;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
         }
-        h2 { color: #00ffcc; font-size: 16px; margin-bottom: 10px; text-transform: uppercase; }
-        .big-text { font-size: 48px; font-weight: bold; color: white; }
-        .status-label { color: #888; font-size: 14px; }
-        
-        .btn-action {
-            background-color: #e67e22;
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            font-size: 18px;
-            font-weight: bold;
-            border-radius: 10px;
-            cursor: pointer;
-            width: 100%;
-            margin-top: 10px;
-        }
-        .btn-action:active { background-color: #d35400; }
-        
         .btn-connect {
             background: linear-gradient(90deg, #8e44ad, #c0392b);
             color: white;
@@ -55,117 +36,144 @@
             font-size: 18px;
             font-weight: bold;
             cursor: pointer;
-            margin-bottom: 20px;
         }
-
+        .btn-action {
+            background-color: #e67e22;
+            color: white;
+            border: none;
+            padding: 15px;
+            width: 100%;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
         input[type="number"] {
             background-color: #333;
             color: white;
-            border: 1px solid #555;
             padding: 10px;
             font-size: 24px;
             width: 80px;
             text-align: center;
             border-radius: 5px;
+            border: 1px solid #555;
+        }
+        /* CONSOLA DE ERRORES EN PANTALLA */
+        #console-log {
+            width: 90%;
+            background-color: #000;
+            border: 1px solid #444;
+            color: #0f0;
+            font-size: 12px;
+            padding: 10px;
+            margin-top: 20px;
+            height: 150px;
+            overflow-y: scroll;
+            text-align: left;
+            font-family: monospace;
         }
     </style>
 </head>
 <body>
 
     <div class="card">
-        <button id="btnConnect" class="btn-connect" onclick="conectarDispositivo()">
-            ▶ BUSCAR DISPOSITIVOS
+        <h3>Paso 1: Conexión</h3>
+        <button id="btnConnect" class="btn-connect" onclick="iniciarConexion()">
+            BUSCAR DISPOSITIVO
         </button>
-        <div id="statusConnection" class="status-label">Esperando acción...</div>
+        <p id="status">Estado: Esperando...</p>
     </div>
 
     <div class="card">
-        <h2>Temperatura Actual</h2>
-        <div class="big-text"><span id="tempActual">--</span>°C</div>
-    </div>
-
-    <div class="card">
-        <h2>Control Manual</h2>
-        <div style="margin-bottom: 15px;">
-            <input type="number" id="inputTemp" value="180"> °C
+        <h3>Paso 2: Control</h3>
+        <div style="font-size: 40px; font-weight: bold; margin-bottom: 10px;">
+            <span id="tempActual">--</span>°C
         </div>
-        <button class="btn-action" onclick="fijarTemperatura()">
-            FIJAR / CALENTAR
-        </button>
-        <br><br>
-        <button class="btn-action" style="background-color: #444;" onclick="detenerCalentamiento()">
-            DETENER (OFF)
-        </button>
+        
+        <input type="number" id="inputTemp" value="180"> °C
+        <button class="btn-action" onclick="fijarTemperatura()">CALENTAR (ON)</button>
+        <button class="btn-action" style="background-color:#444" onclick="apagar()">DETENER (OFF)</button>
+        
+        <p>Batería: <span id="batteryLevel">--</span>%</p>
     </div>
 
-    <div class="card">
-        <h2>Batería</h2>
-        <div class="big-text"><span id="batteryLevel">--</span>%</div>
-    </div>
+    <div id="console-log">Log del sistema iniciado...</div>
 
     <script>
-        // --- CONSTANTES ---
+        // --- UTILIDAD DE LOG EN PANTALLA ---
+        function log(msg, color = "#0f0") {
+            const consoleDiv = document.getElementById('console-log');
+            const newLine = document.createElement('div');
+            newLine.style.color = color;
+            newLine.innerText = `> ${msg}`;
+            consoleDiv.appendChild(newLine);
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+            console.log(msg);
+        }
+
+        // --- VERIFICACIÓN INICIAL ---
+        if (!navigator.bluetooth) {
+            log("ERROR CRÍTICO: Tu navegador NO soporta Web Bluetooth.", "red");
+            log("Usa Chrome en Android o Bluefy en iPhone.", "red");
+            document.getElementById('btnConnect').disabled = true;
+            document.getElementById('btnConnect').innerText = "NAVEGADOR NO COMPATIBLE";
+        } else {
+            log("API Bluetooth detectada correctamente.");
+        }
+
+        if (window.location.protocol === 'http:') {
+            log("ADVERTENCIA: Estás en HTTP. Bluetooth requiere HTTPS o localhost.", "yellow");
+        }
+
+        // --- VARIABLES ---
+        let dispositivoConectado = null;
+        let charTempWrite = null; // Para escribir (0021)
+        
         const SERVICE_UUID = '00000001-5354-4f52-5a26-4249434b454c';
         const CHAR_BATTERY = '00000003-5354-4f52-5a26-4249434b454c';
-        const CHAR_TEMP_ACTUAL = '00000011-5354-4f52-5a26-4249434b454c';
-        const CHAR_TEMP_TARGET = '00000021-5354-4f52-5a26-4249434b454c';
+        const CHAR_TEMP_READ = '00000011-5354-4f52-5a26-4249434b454c';
+        const CHAR_TEMP_WRITE = '00000021-5354-4f52-5a26-4249434b454c';
 
-        let charTargetTemp = null;
-
-        async function conectarDispositivo() {
+        // --- FUNCIÓN DE CONEXIÓN ---
+        async function iniciarConexion() {
+            log("Iniciando escaneo...");
+            
             try {
-                document.getElementById('statusConnection').innerText = "Abriendo escáner...";
-                
-                // CAMBIO IMPORTANTE: acceptAllDevices: true
-                // Esto mostrará TODOS los dispositivos Bluetooth cercanos.
-                // Tú debes seleccionar manualmente el que diga "STORZ&BICKEL" o "CRAFTY"
+                // Opción A: Filtro Específico (Más seguro si funciona)
+                /*
                 const device = await navigator.bluetooth.requestDevice({
-                    acceptAllDevices: true,
-                    optionalServices: [SERVICE_UUID]
+                    filters: [{ services: [SERVICE_UUID] }]
+                });
+                */
+
+                // Opción B: Aceptar todo (Mejor para encontrarlo si el filtro falla)
+                const device = await navigator.bluetooth.requestDevice({
+                     acceptAllDevices: true,
+                     optionalServices: [SERVICE_UUID]
                 });
 
-                document.getElementById('statusConnection').innerText = "Conectando...";
+                log(`Dispositivo seleccionado: ${device.name}`);
+                document.getElementById('status').innerText = "Conectando...";
                 
                 const server = await device.gatt.connect();
-                console.log('Conectado al servidor GATT');
+                log("Servidor GATT conectado.");
 
-                // Intentar obtener el servicio
-                let service;
-                try {
-                    service = await server.getPrimaryService(SERVICE_UUID);
-                } catch (e) {
-                    alert("Dispositivo conectado, pero no parece ser un Crafty/Mighty original o el servicio no está disponible.");
-                    console.error(e);
-                    return;
-                }
+                const service = await server.getPrimaryService(SERVICE_UUID);
+                log("Servicio S&B encontrado.");
 
-                // 1. Leer Batería
+                // 1. Configurar Batería
                 try {
-                    const batteryChar = await service.getCharacteristic(CHAR_BATTERY);
-                    const value = await batteryChar.readValue();
-                    const porcentaje = value.getUint16(0, true); 
-                    document.getElementById('batteryLevel').innerText = porcentaje;
-                } catch (err) {
-                    console.log("Intentando lectura alternativa de batería...");
-                    // Fallback para modelos antiguos (a veces es Uint8)
-                    try {
-                        const batteryChar = await service.getCharacteristic(CHAR_BATTERY);
-                        const value = await batteryChar.readValue();
-                        const porcentaje = value.getUint8(0); 
-                        document.getElementById('batteryLevel').innerText = porcentaje;
-                    } catch(e2) {
-                        document.getElementById('batteryLevel').innerText = "?";
-                    }
-                }
+                    const batChar = await service.getCharacteristic(CHAR_BATTERY);
+                    const val = await batChar.readValue();
+                    const batNivel = val.getUint16(0, true);
+                    document.getElementById('batteryLevel').innerText = batNivel;
+                    log(`Batería leída: ${batNivel}%`);
+                } catch (e) { log("Error leyendo batería: " + e, "orange"); }
 
-                // 2. Temp Actual (Notificaciones)
+                // 2. Configurar Temperatura Actual
                 try {
-                    const tempChar = await service.getCharacteristic(CHAR_TEMP_ACTUAL);
-                    await tempChar.startNotifications();
-                    tempChar.addEventListener('characteristicvaluechanged', (event) => {
-                        const val = event.target.value;
-                        const temp = val.getUint16(0, true) / 10;
-                        document.getElementById('tempActual').innerText = temp.toFixed(1);
-                    });
-                } catch (err) {
-                    console.error("Error temp actual", err);
+                    const tempReadChar = await service.getCharacteristic(CHAR_TEMP_READ);
+                    await tempReadChar.startNotifications();
+                    tempReadChar.addEventListener('characteristicvaluechanged', (e) => {
+                        const t = e.target.value.getUint16(0, true)
