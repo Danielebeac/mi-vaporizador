@@ -3,177 +3,214 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>S&B Web Controller</title>
+    <title>Crafty+ Master Control</title>
     <style>
-        body {
-            background-color: #0d0d0d;
-            color: #ffffff;
-            font-family: 'Courier New', Courier, monospace;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding-top: 20px;
-            min-height: 100vh;
-            margin: 0;
-        }
-        .card {
-            background-color: #1a1a1a;
-            border: 1px solid #333;
-            border-radius: 15px;
-            padding: 20px;
-            margin: 10px;
-            width: 90%;
-            max-width: 400px;
-            text-align: center;
-        }
-        .btn-connect {
-            background: linear-gradient(90deg, #8e44ad, #c0392b);
-            color: white;
-            border: none;
-            padding: 15px;
-            width: 100%;
-            border-radius: 10px;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        .btn-action {
-            background-color: #e67e22;
-            color: white;
-            border: none;
-            padding: 15px;
-            width: 100%;
-            border-radius: 10px;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-        input[type="number"] {
-            background-color: #333;
-            color: white;
-            padding: 10px;
-            font-size: 24px;
-            width: 80px;
-            text-align: center;
-            border-radius: 5px;
-            border: 1px solid #555;
-        }
-        /* CONSOLA DE ERRORES EN PANTALLA */
-        #console-log {
-            width: 90%;
-            background-color: #000;
-            border: 1px solid #444;
-            color: #0f0;
-            font-size: 12px;
-            padding: 10px;
-            margin-top: 20px;
-            height: 150px;
-            overflow-y: scroll;
-            text-align: left;
-            font-family: monospace;
-        }
+        body { font-family: 'Courier New', monospace; background-color: #050505; color: #00ffcc; text-align: center; padding: 20px; margin: 0; }
+        h1 { text-shadow: 0 0 10px #00ffcc; margin-bottom: 5px; font-size: 1.5rem; }
+        .status { color: #888; font-size: 0.8rem; margin-bottom: 20px; }
+        
+        /* Tarjetas */
+        .card { background: #1a1a1a; border: 1px solid #333; border-radius: 12px; padding: 15px; margin: 15px auto; max-width: 320px; box-shadow: 0 4px 15px rgba(0,255,204,0.1); }
+        .value { font-size: 48px; font-weight: bold; color: #fff; margin: 10px 0; }
+        .sub-value { font-size: 14px; color: #aaa; }
+
+        /* Botones */
+        button { border: none; padding: 15px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; width: 100%; margin-top: 10px; transition: transform 0.1s; }
+        button:active { transform: scale(0.98); }
+        .btn-connect { background: linear-gradient(45deg, #00b09b, #96c93d); color: #000; }
+        .btn-set { background: #e67e22; color: white; }
+        .btn-cata { background: linear-gradient(45deg, #8e44ad, #c0392b); color: white; box-shadow: 0 0 10px #8e44ad; }
+        .btn-debug { background: #333; color: #888; font-size: 12px; padding: 10px; }
+
+        input { font-size: 24px; padding: 5px; width: 80px; text-align: center; background: #222; border: 1px solid #444; color: white; border-radius: 5px; }
+        
+        /* Logs */
+        #logs { font-size: 10px; color: #555; text-align: left; margin-top: 30px; border-top: 1px solid #333; padding: 10px; height: 150px; overflow-y: scroll; background: #000; }
     </style>
 </head>
 <body>
 
-    <div class="card">
-        <h3>Paso 1: Conexión</h3>
-        <button id="btnConnect" class="btn-connect" onclick="iniciarConexion()">
-            BUSCAR DISPOSITIVO
-        </button>
-        <p id="status">Estado: Esperando...</p>
+    <h1>🌫️ CRAFTY+ MASTER</h1>
+    <div id="statusText" class="status">Desconectado</div>
+
+    <div id="connectPanel">
+        <button class="btn-connect" onclick="connect()">🔌 CONECTAR DISPOSITIVO</button>
     </div>
 
-    <div class="card">
-        <h3>Paso 2: Control</h3>
-        <div style="font-size: 40px; font-weight: bold; margin-bottom: 10px;">
-            <span id="tempActual">--</span>°C
+    <div id="app" style="display:none;">
+        
+        <div class="card" style="border-color: #8e44ad;">
+            <small>🍷 MODO CATADOR</small>
+            <div id="cataStatus" class="sub-value">Listo para iniciar</div>
+            <button class="btn-cata" onclick="startCata()">▶ INICIAR SESIÓN</button>
+            <p style="font-size:10px; color:#aaa;">Inicia en 175°C y sube cada 45s</p>
         </div>
-        
-        <input type="number" id="inputTemp" value="180"> °C
-        <button class="btn-action" onclick="fijarTemperatura()">CALENTAR (ON)</button>
-        <button class="btn-action" style="background-color:#444" onclick="apagar()">DETENER (OFF)</button>
-        
-        <p>Batería: <span id="batteryLevel">--</span>%</p>
+
+        <div class="card">
+            <small>TEMPERATURA ACTUAL</small>
+            <div id="tempDisplay" class="value">--.-</div>
+            <small>OBJETIVO: <span id="targetDisplay">--</span>°C</small>
+        </div>
+
+        <div class="card">
+            <small>CONTROL MANUAL</small>
+            <br><br>
+            <input type="number" id="targetInput" value="180"> °C
+            <button class="btn-set" onclick="setTemperature()">FIJAR TEMPERATURA</button>
+        </div>
+
+        <div class="card">
+            <small>DIAGNÓSTICO BATERÍA</small>
+            <div id="batDisplay" class="value" style="font-size:24px;">--%</div>
+            <button class="btn-debug" onclick="scanServices()">🔍 ESCANEAR UUIDs</button>
+        </div>
     </div>
 
-    <div id="console-log">Log del sistema iniciado...</div>
+    <div id="logs"></div>
 
     <script>
-        // --- UTILIDAD DE LOG EN PANTALLA ---
-        function log(msg, color = "#0f0") {
-            const consoleDiv = document.getElementById('console-log');
-            const newLine = document.createElement('div');
-            newLine.style.color = color;
-            newLine.innerText = `> ${msg}`;
-            consoleDiv.appendChild(newLine);
-            consoleDiv.scrollTop = consoleDiv.scrollHeight;
-            console.log(msg);
-        }
-
-        // --- VERIFICACIÓN INICIAL ---
-        if (!navigator.bluetooth) {
-            log("ERROR CRÍTICO: Tu navegador NO soporta Web Bluetooth.", "red");
-            log("Usa Chrome en Android o Bluefy en iPhone.", "red");
-            document.getElementById('btnConnect').disabled = true;
-            document.getElementById('btnConnect').innerText = "NAVEGADOR NO COMPATIBLE";
-        } else {
-            log("API Bluetooth detectada correctamente.");
-        }
-
-        if (window.location.protocol === 'http:') {
-            log("ADVERTENCIA: Estás en HTTP. Bluetooth requiere HTTPS o localhost.", "yellow");
-        }
-
-        // --- VARIABLES ---
-        let dispositivoConectado = null;
-        let charTempWrite = null; // Para escribir (0021)
+        // CONFIGURACIÓN
+        // UUIDs Invertidos (Modo Espejo)
+        const SUFFIX = '-4c45-4b43-4942-265a524f5453';
+        const SERVICE_MAIN = '00000001' + SUFFIX; 
+        const CHAR_TEMP    = '00000011' + SUFFIX; 
+        const CHAR_TARGET  = '00000021' + SUFFIX; 
         
-        const SERVICE_UUID = '00000001-5354-4f52-5a26-4249434b454c';
-        const CHAR_BATTERY = '00000003-5354-4f52-5a26-4249434b454c';
-        const CHAR_TEMP_READ = '00000011-5354-4f52-5a26-4249434b454c';
-        const CHAR_TEMP_WRITE = '00000021-5354-4f52-5a26-4249434b454c';
+        // Variables globales
+        let deviceCache = null;
+        let serverCache = null;
+        let cache = {};
+        let pollingInterval;
 
-        // --- FUNCIÓN DE CONEXIÓN ---
-        async function iniciarConexion() {
-            log("Iniciando escaneo...");
-            
+        function log(msg) {
+            const logDiv = document.getElementById('logs');
+            logDiv.innerHTML = `> ${msg}<br>` + logDiv.innerHTML;
+        }
+
+        async function connect() {
             try {
-                // Opción A: Filtro Específico (Más seguro si funciona)
-                /*
+                log("Solicitando conexión...");
                 const device = await navigator.bluetooth.requestDevice({
-                    filters: [{ services: [SERVICE_UUID] }]
-                });
-                */
-
-                // Opción B: Aceptar todo (Mejor para encontrarlo si el filtro falla)
-                const device = await navigator.bluetooth.requestDevice({
-                     acceptAllDevices: true,
-                     optionalServices: [SERVICE_UUID]
+                    filters: [{ namePrefix: 'STORZ' }], 
+                    optionalServices: [SERVICE_MAIN] 
                 });
 
-                log(`Dispositivo seleccionado: ${device.name}`);
-                document.getElementById('status').innerText = "Conectando...";
+                deviceCache = device;
+                document.getElementById('statusText').innerText = "Conectado a: " + device.name;
                 
                 const server = await device.gatt.connect();
-                log("Servidor GATT conectado.");
+                serverCache = server; // Guardamos para escanear después
+                
+                const service = await server.getPrimaryService(SERVICE_MAIN);
+                log("Servicio principal OK");
 
-                const service = await server.getPrimaryService(SERVICE_UUID);
-                log("Servicio S&B encontrado.");
+                // Conectar características críticas
+                try { cache['temp'] = await service.getCharacteristic(CHAR_TEMP); } catch(e) { log("Error Temp: " + e); }
+                try { cache['target'] = await service.getCharacteristic(CHAR_TARGET); } catch(e) { log("Error Target: " + e); }
 
-                // 1. Configurar Batería
-                try {
-                    const batChar = await service.getCharacteristic(CHAR_BATTERY);
-                    const val = await batChar.readValue();
-                    const batNivel = val.getUint16(0, true);
-                    document.getElementById('batteryLevel').innerText = batNivel;
-                    log(`Batería leída: ${batNivel}%`);
-                } catch (e) { log("Error leyendo batería: " + e, "orange"); }
+                // UI
+                document.getElementById('connectPanel').style.display = 'none';
+                document.getElementById('app').style.display = 'block';
 
-                // 2. Configurar Temperatura Actual
-                try {
-                    const tempReadChar = await service.getCharacteristic(CHAR_TEMP_READ);
-                    await tempReadChar.startNotifications();
-                    tempReadChar.addEventListener('characteristicvaluechanged', (e) => {
-                        const t = e.target.value.getUint16(0, true)
+                // Iniciar bucle de lectura
+                startPolling();
+
+            } catch (err) {
+                alert("Error: " + err);
+            }
+        }
+
+        async function startPolling() {
+            pollingInterval = setInterval(async () => {
+                if (cache['temp']) {
+                    const val = await cache['temp'].readValue();
+                    const cel = val.getUint16(0, true) / 10;
+                    document.getElementById('tempDisplay').innerText = cel.toFixed(1) + "°C";
+                }
+            }, 2000);
+        }
+
+        async function setTemperature(val = null) {
+            if (!cache['target']) return alert("Error: No hay conexión de control");
+            
+            // Si no nos pasan valor, lo tomamos del input
+            const num = val ? val : parseInt(document.getElementById('targetInput').value);
+            
+            // Actualizar UI visualmente
+            document.getElementById('targetDisplay').innerText = num;
+            document.getElementById('targetInput').value = num;
+
+            // Enviar comando Bluetooth
+            const buffer = new Uint16Array([num * 10]);
+            await cache['target'].writeValue(buffer);
+            log(`Comando enviado: ${num}°C`);
+        }
+
+        // --- LÓGICA MODO CATADOR ---
+        async function startCata() {
+            const pasos = [175, 180, 185, 190, 195];
+            const tiempoEntrePasos = 45000; // 45 segundos (ajustable)
+            
+            let btn = document.querySelector('.btn-cata');
+            let status = document.getElementById('cataStatus');
+            
+            btn.disabled = true;
+            btn.style.background = "#555";
+            btn.innerText = "⏳ SESIÓN EN CURSO...";
+
+            for (let i = 0; i < pasos.length; i++) {
+                let temp = pasos[i];
+                status.innerText = `Paso ${i+1}/${pasos.length}: Calentando a ${temp}°C`;
+                log(`[CATADOR] Subiendo a ${temp}°C`);
+                
+                await setTemperature(temp);
+                
+                // Esperar tiempo (Countdown visual simple)
+                if (i < pasos.length - 1) {
+                    await new Promise(r => setTimeout(r, tiempoEntrePasos));
+                }
+            }
+
+            status.innerText = "✅ Sesión Finalizada (195°C)";
+            btn.disabled = false;
+            btn.innerText = "▶ INICIAR SESIÓN";
+            btn.style.background = "linear-gradient(45deg, #8e44ad, #c0392b)";
+            alert("¡Sesión de cata terminada! Disfruta.");
+        }
+
+        // --- LÓGICA ESCÁNER BATERÍA ---
+        async function scanServices() {
+            if (!serverCache) return alert("Primero conecta el dispositivo");
+            log("--- INICIANDO ESCANEO PROFUNDO ---");
+            
+            try {
+                const service = await serverCache.getPrimaryService(SERVICE_MAIN);
+                const characteristics = await service.getCharacteristics();
+                
+                for (const c of characteristics) {
+                    try {
+                        const val = await c.readValue();
+                        // Intentar leer valor byte simple (0-255)
+                        const intVal = val.getUint8(0); 
+                        // Intentar leer short (como temp)
+                        const shortVal = val.getUint16(0, true);
+
+                        log(`UUID: ...${c.uuid.slice(4, 8)} | Val(8): ${intVal} | Val(16): ${shortVal}`);
+
+                        // Si parece una batería (0-100) y NO es una de las temperaturas
+                        if (intVal > 0 && intVal <= 100 && intVal !== 32) { // 32 suele ser un byte basura
+                            document.getElementById('batDisplay').innerText = intVal + "% (Posible)";
+                            log(`¡ENCONTRADO POSIBLE BATERÍA! UUID termina en: ${c.uuid.slice(4,8)}`);
+                        }
+                    } catch (err) {
+                        log(`UUID Protegido/Escritura: ...${c.uuid.slice(4, 8)}`);
+                    }
+                }
+            } catch (e) {
+                log("Error escaneo: " + e);
+            }
+            log("--- FIN ESCANEO ---");
+        }
+    </script>
+</body>
+</html>
