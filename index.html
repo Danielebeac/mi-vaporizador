@@ -3,203 +3,305 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CRAFTY+ FINAL V4</title>
+    <title>CRAFTY+ ULTIMATE</title>
     <style>
-        body { font-family: 'Verdana', sans-serif; background-color: #000; color: #fff; text-align: center; padding: 20px; margin: 0; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: #000; color: #fff; text-align: center; padding: 20px; margin: 0; user-select: none; }
         
-        /* ESTILOS DE ESTADO */
-        .header { margin-bottom: 20px; }
-        .badge { padding: 5px 10px; border-radius: 5px; font-weight: bold; font-size: 14px; }
-        .badge-no { background-color: #ff0000; color: #fff; }
-        .badge-ok { background-color: #00ff00; color: #000; }
+        /* HEADER & ESTADO */
+        .header { display: flex; justify-content: space-between; align-items: center; max-width: 400px; margin: 0 auto 20px auto; padding: 0 10px;}
+        h2 { margin: 0; font-size: 18px; color: #ccc; letter-spacing: 1px; }
+        
+        .badge { padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 12px; text-transform: uppercase; }
+        .badge-no { background-color: #333; color: #777; border: 1px solid #555; }
+        .badge-ok { background-color: #00ff00; color: #000; box-shadow: 0 0 10px #00ff00; }
 
         /* TARJETAS */
-        .card { background: #111; border: 1px solid #333; border-radius: 15px; padding: 20px; margin: 15px auto; max-width: 350px; box-shadow: 0 0 20px rgba(0,255,0,0.1); }
+        .card { background: #121212; border: 1px solid #333; border-radius: 20px; padding: 25px; margin: 15px auto; max-width: 360px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); position: relative; overflow: hidden; }
         
-        .temp-big { font-size: 56px; font-weight: bold; color: #00e5ff; text-shadow: 0 0 15px rgba(0, 229, 255, 0.6); margin: 15px 0; }
-        .label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 2px; }
+        /* MONITOR TEMPERATURA */
+        .temp-display { font-size: 64px; font-weight: 200; color: #fff; margin: 10px 0; letter-spacing: -2px; }
+        .temp-unit { font-size: 24px; color: #666; font-weight: normal;}
         
-        /* DATOS SECUNDARIOS */
-        .stats-row { display: flex; justify-content: space-between; margin-top: 15px; padding-top: 15px; border-top: 1px solid #222; }
-        .stat-val { font-size: 20px; font-weight: bold; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; border-top: 1px solid #222; padding-top: 15px; }
+        .stat-label { font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+        .stat-val { font-size: 18px; font-weight: bold; }
         
+        /* CONTROLES */
+        .control-group { display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 20px; }
+        input[type="number"] { background: #1a1a1a; border: 1px solid #444; color: #fff; font-size: 28px; padding: 10px; width: 80px; text-align: center; border-radius: 12px; outline: none; transition: 0.3s; }
+        input:focus { border-color: #00e5ff; box-shadow: 0 0 10px rgba(0,229,255,0.2); }
+
         /* BOTONES */
-        button { border: none; padding: 18px; font-size: 16px; font-weight: bold; border-radius: 12px; cursor: pointer; width: 100%; margin-top: 12px; transition: 0.2s; }
-        button:active { transform: scale(0.95); opacity: 0.8; }
+        button { border: none; padding: 16px; font-size: 15px; font-weight: 700; border-radius: 12px; cursor: pointer; width: 100%; margin-top: 10px; transition: all 0.2s ease; position: relative; overflow: hidden; }
+        button:active { transform: scale(0.96); }
+
+        .btn-connect { background: #fff; color: #000; font-size: 16px; }
         
-        .btn-connect { background: #fff; color: #000; }
-        /* Botón de Calentar estilo "Lava" */
-        .btn-on { background: linear-gradient(135deg, #ff9966, #ff5e62); color: white; font-size: 22px; box-shadow: 0 4px 15px rgba(255, 94, 98, 0.4); }
-        .btn-off { background: #333; color: #ccc; }
+        /* Botones de Acción */
+        .btn-on { background: linear-gradient(135deg, #ff7e5f, #feb47b); color: #000; font-size: 18px; }
+        .btn-off { background: #2a2a2a; color: #fff; }
+        .btn-boost { background: linear-gradient(135deg, #FFD700, #ffaa00); color: #000; }
+        
+        /* Modo Catador */
+        .btn-cata { background: linear-gradient(135deg, #8e2de2, #4a00e0); color: white; }
+        .cata-active { animation: pulse 2s infinite; border: 1px solid #fff; }
 
-        input[type="number"] { background: #222; border: 1px solid #444; color: #fff; font-size: 24px; padding: 10px; width: 90px; text-align: center; border-radius: 8px; }
+        .btn-disconnect { background: transparent; border: 1px solid #ff3333; color: #ff3333; margin-top: 30px; padding: 10px; font-size: 12px; }
 
-        /* CONSOLA */
-        #logs { font-family: monospace; font-size: 10px; color: #555; text-align: left; margin-top: 30px; border-top: 1px solid #222; padding-top: 10px; height: 100px; overflow-y: auto; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(138, 43, 226, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(138, 43, 226, 0); } 100% { box-shadow: 0 0 0 0 rgba(138, 43, 226, 0); } }
+
+        /* LOGS OCULTOS */
+        #logs { display: none; } 
     </style>
 </head>
 <body>
 
     <div class="header">
-        <h2>🔥 CRAFTY+ V4</h2>
-        <span id="statusBadge" class="badge badge-no">DESCONECTADO</span>
+        <h2>CRAFTY+ <span style="color:#00e5ff">ULTIMATE</span></h2>
+        <span id="statusBadge" class="badge badge-no">OFF</span>
     </div>
 
     <div id="screen-connect">
-        <div class="card">
-            <p>Control Web Bluetooth</p>
-            <button class="btn-connect" onclick="conectar()">🔌 CONECTAR DISPOSITIVO</button>
+        <div class="card" style="padding: 40px 20px;">
+            <div style="font-size: 40px; margin-bottom: 20px;">🔌</div>
+            <p style="color:#888; margin-bottom: 30px;">Conecta tu dispositivo para acceder al panel de control avanzado.</p>
+            <button class="btn-connect" onclick="conectar()">INICIAR CONEXIÓN</button>
         </div>
     </div>
 
     <div id="screen-app" style="display:none;">
         
         <div class="card">
-            <div class="label">Temperatura Actual</div>
-            <div id="tempActual" class="temp-big">--.-°C</div>
+            <div class="temp-display">
+                <span id="tempActual">--</span><span class="temp-unit">°C</span>
+            </div>
             
-            <div class="stats-row">
+            <div class="stats-grid">
                 <div>
-                    <div class="label">Objetivo</div>
-                    <div id="tempTarget" class="stat-val" style="color: #ff9966;">--°C</div>
+                    <div class="stat-label">Objetivo</div>
+                    <div id="tempTarget" class="stat-val" style="color: #ff9966;">--</div>
                 </div>
                 <div>
-                    <div class="label">Batería</div>
-                    <div id="batteryLevel" class="stat-val" style="color: #00ff00;">--%</div>
+                    <div class="stat-label">Batería</div>
+                    <div id="batteryLevel" class="stat-val" style="color: #00ff00;">--</div>
                 </div>
             </div>
         </div>
 
         <div class="card">
-            <div class="label">Panel de Control</div>
-            <br>
-            <div style="display:flex; align-items:center; justify-content:center; gap:10px;">
-                <input type="number" id="inputTemp" value="180"> 
-                <span style="font-size: 20px;">°C</span>
+            <div class="stat-label" style="text-align: left; margin-bottom: 15px;">MODOS INTELIGENTES</div>
+            
+            <button id="btnCata" class="btn-cata" onclick="iniciarModoCatador()">
+                🍷 MODO CATADOR (AUTO)
+            </button>
+            <p id="cataInfo" style="font-size: 10px; color: #888; margin-top: 5px;">Sube progresivamente: 175°C ⮕ 185°C ⮕ 195°C</p>
+
+            <button class="btn-boost" onclick="activarBoost()">
+                ⚡ BOOST (+15°C)
+            </button>
+        </div>
+
+        <div class="card">
+            <div class="stat-label" style="text-align: left; margin-bottom: 15px;">CONTROL MANUAL</div>
+            
+            <div class="control-group">
+                <button style="width: 40px; background: #222; color: #fff;" onclick="ajustar(-1)">-</button>
+                <input type="number" id="inputTemp" value="180">
+                <button style="width: 40px; background: #222; color: #fff;" onclick="ajustar(1)">+</button>
             </div>
             
-            <button class="btn-on" onclick="encender()">🔥 CALENTAR</button>
-            <button class="btn-off" onclick="apagar()">❄️ DETENER</button>
+            <button class="btn-on" onclick="encender()">ENCENDER 🔥</button>
+            <button class="btn-off" onclick="apagar()">DETENER ❄️</button>
+
+            <button class="btn-disconnect" onclick="desconectar()">DESCONECTAR DISPOSITIVO</button>
         </div>
     </div>
 
-    <div id="logs">Esperando...</div>
-
     <script>
-        // --- CONFIGURACIÓN DE PUERTAS (UUIDs) ---
+        // --- CONSTANTES ---
         const SUFFIX = '-4c45-4b43-4942-265a524f5453';
         const SERVICE_MAIN = '00000001' + SUFFIX;
         
-        const UUID_TEMP_ACTUAL = '00000011' + SUFFIX; 
-        const UUID_TEMP_TARGET = '00000021' + SUFFIX; // Para decirle "CUÁNTO"
-        const UUID_BATERIA     = '00000041' + SUFFIX; 
-        
-        // ¡LOS NUEVOS DESCUBRIMIENTOS!
-        const UUID_SWITCH_ON   = '00000081' + SUFFIX; // Botón B (START)
-        const UUID_SWITCH_OFF  = '00000091' + SUFFIX; // Botón C (STOP)
+        const UUID = {
+            TEMP_ACTUAL: '00000011' + SUFFIX,
+            TEMP_TARGET: '00000021' + SUFFIX,
+            BATERIA:     '00000041' + SUFFIX,
+            ON:          '00000081' + SUFFIX, // Confirmado
+            OFF:         '00000091' + SUFFIX  // Confirmado
+        };
 
-        let cache = { temp: null, target: null, batt: null, on: null, off: null };
+        let deviceCache = null;
+        let char = {}; // Cache de características
+        let loopInterval = null;
+        let cataInterval = null;
 
-        function log(msg) {
-            const d = new Date();
-            const l = document.getElementById('logs');
-            l.innerHTML = `[${d.toLocaleTimeString()}] ${msg}<br>` + l.innerHTML;
-        }
-
+        // --- CONEXIÓN ---
         async function conectar() {
             try {
-                log("Buscando Crafty...");
                 const device = await navigator.bluetooth.requestDevice({
                     filters: [{ namePrefix: 'STORZ' }],
                     optionalServices: [SERVICE_MAIN]
                 });
 
-                log("Conectando...");
+                deviceCache = device;
+                // Detectar desconexión física (por si apagan el bluetooth del cel)
+                device.addEventListener('gattserverdisconnected', onDisconnect);
+
                 const server = await device.gatt.connect();
                 const service = await server.getPrimaryService(SERVICE_MAIN);
                 
-                log("Obteniendo controles...");
-                cache.temp   = await service.getCharacteristic(UUID_TEMP_ACTUAL);
-                cache.target = await service.getCharacteristic(UUID_TEMP_TARGET);
-                cache.batt   = await service.getCharacteristic(UUID_BATERIA);
-                
-                // Conectar los interruptores
-                cache.on     = await service.getCharacteristic(UUID_SWITCH_ON);
-                cache.off    = await service.getCharacteristic(UUID_SWITCH_OFF);
+                // Mapear todo
+                char.temp   = await service.getCharacteristic(UUID.TEMP_ACTUAL);
+                char.target = await service.getCharacteristic(UUID.TEMP_TARGET);
+                char.batt   = await service.getCharacteristic(UUID.BATERIA);
+                char.on     = await service.getCharacteristic(UUID.ON);
+                char.off    = await service.getCharacteristic(UUID.OFF);
 
-                // Actualizar Interfaz
+                // UI
                 document.getElementById('screen-connect').style.display = 'none';
                 document.getElementById('screen-app').style.display = 'block';
-                document.getElementById('statusBadge').innerText = "CONECTADO";
+                document.getElementById('statusBadge').innerText = "ONLINE";
                 document.getElementById('statusBadge').className = "badge badge-ok";
-                log("✅ ¡Listo para usar!");
 
-                // Iniciar lectura automática (cada 1.5s)
-                setInterval(actualizarDatos, 1500);
+                // Iniciar polling
+                loopInterval = setInterval(leerDatos, 1000);
 
             } catch (error) {
                 alert("Error: " + error);
-                log(error);
             }
         }
 
-        async function actualizarDatos() {
-            if (!cache.temp) return;
-            try {
-                // Leer Temp
-                const vT = await cache.temp.readValue();
-                const t = vT.getUint16(0, true) / 10;
-                document.getElementById('tempActual').innerText = t.toFixed(1) + "°C";
+        function desconectar() {
+            if (deviceCache && deviceCache.gatt.connected) {
+                deviceCache.gatt.disconnect();
+            } else {
+                onDisconnect();
+            }
+        }
 
-                // Leer Batería
-                const vB = await cache.batt.readValue();
+        function onDisconnect() {
+            clearInterval(loopInterval);
+            detenerCata(); // Parar modo catador si estaba activo
+            document.getElementById('screen-connect').style.display = 'block';
+            document.getElementById('screen-app').style.display = 'none';
+            document.getElementById('statusBadge').innerText = "OFF";
+            document.getElementById('statusBadge').className = "badge badge-no";
+            deviceCache = null;
+        }
+
+        // --- LECTURA DE DATOS ---
+        async function leerDatos() {
+            if (!char.temp) return;
+            try {
+                // Temperatura
+                const vT = await char.temp.readValue();
+                const t = vT.getUint16(0, true) / 10;
+                document.getElementById('tempActual').innerText = t.toFixed(1);
+
+                // Batería
+                const vB = await char.batt.readValue();
                 const b = vB.getUint16(0, true);
                 document.getElementById('batteryLevel').innerText = b + "%";
                 
-                // Leer Objetivo
-                const vO = await cache.target.readValue();
+                // Objetivo
+                const vO = await char.target.readValue();
                 const o = vO.getUint16(0, true) / 10;
-                document.getElementById('tempTarget').innerText = o + "°C";
+                document.getElementById('tempTarget').innerText = o > 0 ? o + "°C" : "OFF";
 
             } catch (e) { console.log(e); }
         }
 
-        // --- LA LÓGICA MAESTRA ---
-        async function encender() {
-            if (!cache.target || !cache.on) return alert("No conectado");
-            
-            const grados = document.getElementById('inputTemp').value;
-            const valTemp = grados * 10; // 180 -> 1800
+        // --- CONTROL MANUAL ---
+        function ajustar(delta) {
+            const input = document.getElementById('inputTemp');
+            let val = parseInt(input.value) + delta;
+            if (val > 210) val = 210;
+            if (val < 40) val = 40;
+            input.value = val;
+        }
 
+        async function encender(gradosOverride = null) {
+            if (!char.on) return;
+            const grados = gradosOverride || document.getElementById('inputTemp').value;
+            
             try {
-                log(`1. Fijando temperatura a ${grados}°C...`);
-                await escribir(cache.target, valTemp);
+                // 1. Escribir Target
+                await escribir(char.target, grados * 10);
+                // 2. Presionar ON
+                await escribir(char.on, 1);
                 
-                log("2. Presionando botón de ENCENDIDO...");
-                await escribir(cache.on, 1); // Enviamos 1 al Botón B
-                
-                alert(`¡Vape encendido a ${grados}°C! El LED debe estar rojo.`);
-                
-            } catch (e) {
-                log("Error al encender: " + e);
-                alert("Hubo un error al enviar la orden");
-            }
+                // Feedback visual sutil (vibración en móviles)
+                if(navigator.vibrate) navigator.vibrate(50);
+            } catch (e) { alert("Error enviando comando"); }
         }
 
         async function apagar() {
-            if (!cache.off) return;
+            detenerCata(); // Cancelar modos automáticos si están corriendo
+            if (!char.off) return;
             try {
-                log("Presionando botón de APAGADO...");
-                await escribir(cache.off, 1); // Enviamos 1 al Botón C
-                
-                // Opcional: bajar la temperatura objetivo a 0 por si acaso
-                await escribir(cache.target, 0); 
-                
-                alert("Vaporizador detenido.");
-            } catch (e) { log(e); }
+                await escribir(char.off, 1);
+                await escribir(char.target, 0); // Opcional, para limpiar pantalla
+            } catch (e) {}
         }
 
-        // Función auxiliar para escribir datos (Little Endian)
+        // --- MODO BOOST ---
+        async function activarBoost() {
+            // Lee la temperatura actual del input y suma 15
+            let actual = parseInt(document.getElementById('inputTemp').value);
+            let boostTemp = actual + 15;
+            if (boostTemp > 210) boostTemp = 210; // Límite de seguridad
+            
+            document.getElementById('inputTemp').value = boostTemp;
+            await encender(boostTemp);
+            alert(`🚀 BOOST ACTIVADO: ${boostTemp}°C`);
+        }
+
+        // --- MODO CATADOR (Sesión Automática) ---
+        async function iniciarModoCatador() {
+            const pasos = [175, 185, 195];
+            const tiempoPorPaso = 45; // segundos
+            let pasoActual = 0;
+            const btn = document.getElementById('btnCata');
+            const info = document.getElementById('cataInfo');
+
+            btn.classList.add('cata-active');
+            btn.innerText = "DETENER MODO CATADOR";
+            btn.onclick = detenerCata; // Cambiar función del botón
+
+            // Función interna del ciclo
+            const ciclo = async () => {
+                if (pasoActual >= pasos.length) {
+                    detenerCata();
+                    alert("🍷 Sesión de Cata Finalizada");
+                    return;
+                }
+
+                const temp = pasos[pasoActual];
+                info.innerText = `Paso ${pasoActual + 1}/3: Disfrutando a ${temp}°C...`;
+                document.getElementById('inputTemp').value = temp;
+                
+                await encender(temp); // Enviar orden
+
+                // Esperar para el siguiente paso
+                pasoActual++;
+                cataInterval = setTimeout(ciclo, tiempoPorPaso * 1000);
+            };
+
+            // Iniciar primer paso
+            ciclo();
+        }
+
+        function detenerCata() {
+            clearTimeout(cataInterval);
+            cataInterval = null;
+            const btn = document.getElementById('btnCata');
+            btn.classList.remove('cata-active');
+            btn.innerText = "🍷 MODO CATADOR (AUTO)";
+            btn.onclick = iniciarModoCatador; // Restaurar función
+            document.getElementById('cataInfo').innerText = "Sube progresivamente: 175°C ⮕ 185°C ⮕ 195°C";
+        }
+
+        // --- UTILIDADES ---
         async function escribir(caracteristica, valor) {
             const buffer = new ArrayBuffer(2);
             new DataView(buffer).setUint16(0, valor, true);
