@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CRAFTY+ V8 STABLE</title>
+    <title>CRAFTY+ V9 FINAL</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #000; color: #fff; text-align: center; padding: 20px; margin: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
         
@@ -39,6 +39,7 @@
         .btn-main:active { transform: scale(0.97); }
         
         .btn-heat { background: linear-gradient(135deg, #ff6b6b, #ee5253); color: white; }
+        .btn-boost { background: linear-gradient(135deg, #feca57, #ff9f43); color: #000; } /* Nuevo Botón Boost */
         .btn-cata { background: linear-gradient(135deg, #a55eea, #8854d0); color: white; }
         .btn-stop { background: #2d3436; color: #ccc; }
         .btn-disco { background: transparent; border: 1px solid #444; color: #666; font-size: 12px; padding: 10px; margin-top: 10px; }
@@ -58,7 +59,7 @@
     <div id="view-connect" class="screen visible">
         <div class="card" style="padding: 50px 20px;">
             <div style="font-size: 50px; margin-bottom: 20px;">🔌</div>
-            <p style="color: #666; margin-bottom: 30px;">Conecta para iniciar V8 Stable.</p>
+            <p style="color: #666; margin-bottom: 30px;">Conecta para iniciar V9 Final.</p>
             <button class="btn-main btn-heat" onclick="conectar()">CONECTAR</button>
         </div>
     </div>
@@ -91,6 +92,8 @@
             </div>
             
             <button class="btn-main btn-heat" onclick="manualEncender()">🔥 ENCENDER / ACTUALIZAR</button>
+            
+            <button class="btn-main btn-boost" onclick="activarBoost()">⚡ BOOST (+15°C)</button>
             
             <hr style="border-color:#333; margin: 15px 0;">
             
@@ -187,7 +190,7 @@
             if (val < 40) val = 40;
             input.value = val;
             
-            // Envío rápido para sentir agilidad
+            // Envío rápido
             if (char.target) {
                 try { await write(char.target, val * 10); } catch(e) {}
             }
@@ -202,7 +205,18 @@
             if(navigator.vibrate) navigator.vibrate(50);
         }
 
-        // --- MODO CATADOR (LÓGICA CORREGIDA) ---
+        // --- FUNCIÓN BOOST ---
+        async function activarBoost() {
+            let actual = parseInt(document.getElementById('inputTemp').value);
+            let boostTemp = actual + 15;
+            if (boostTemp > 210) boostTemp = 210; // Tope máximo de seguridad
+
+            document.getElementById('inputTemp').value = boostTemp;
+            await manualEncender(boostTemp);
+            alert(`🚀 BOOST: Subiendo a ${boostTemp}°C`);
+        }
+
+        // --- MODO CATADOR (FIX BUG DE ATASCO) ---
         async function iniciarCatadorSmart() {
             if (cataRunning) return; 
             cataRunning = true;
@@ -222,19 +236,18 @@
                 const target = pasos[i];
                 info.innerText = `Paso ${i+1}/${pasos.length}: Subiendo a ${target}°C...`;
                 
-                // 1. Forzamos el envío de la NUEVA temperatura
+                // 1. Forzar envío
                 document.getElementById('inputTemp').value = target;
-                
-                // IMPORTANTE: Pausa pequeña antes de enviar para no saturar
                 await new Promise(r => setTimeout(r, 500));
                 await manualEncender(target); 
 
-                // 2. Esperar a llegar (con margen de 2 grados)
+                // 2. Esperar llegada con TIMEOUT DE SEGURIDAD
+                // Si tarda más de 60s en calentar, avanza igual para no trabarse.
                 await esperarLlegadaTemperatura(target);
 
                 if (!cataRunning) break;
 
-                // 3. Cuenta regresiva
+                // 3. Disfrutar
                 for (let s = tiempoSesion; s > 0; s--) {
                     if (!cataRunning) break;
                     info.innerText = `🔥 Saboreando ${target}°C - Quedan ${s}s`;
@@ -245,7 +258,7 @@
             if (cataRunning) {
                 info.innerText = "✅ ¡Sesión Finalizada!";
                 alert("Modo Catador Terminado");
-                // Reset visual
+                // Reset
                 cataRunning = false;
                 btn.style.background = ""; 
                 btn.innerText = "🍷 MODO CATADOR (SMART)";
@@ -256,15 +269,27 @@
 
         async function esperarLlegadaTemperatura(meta) {
             return new Promise(resolve => {
+                let intentos = 0;
                 const check = setInterval(() => {
+                    intentos++;
                     const actual = parseFloat(document.getElementById('tempActual').innerText);
-                    if (!cataRunning) { clearInterval(check); resolve(); }
+                    
+                    if (!cataRunning) { clearInterval(check); resolve(); return; }
 
-                    // Si estamos cerca (margen de error 3 grados por si fluctúa)
+                    // CONDICIÓN DE ÉXITO: Llegamos cerca de la meta
                     if (actual >= (meta - 3)) {
                         clearInterval(check);
                         resolve();
                     }
+                    
+                    // CONDICIÓN DE SEGURIDAD: Han pasado 90 segundos y no llega
+                    // Evita que el código se quede pegado si la batería flaquea
+                    if (intentos > 90) {
+                        console.log("Timeout esperando temperatura, avanzando...");
+                        clearInterval(check);
+                        resolve(); 
+                    }
+
                 }, 1000);
             });
         }
