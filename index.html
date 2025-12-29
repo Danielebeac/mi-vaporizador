@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CRAFTY+ V10 ROBUST</title>
+    <title>CRAFTY+ V11 TRAFFIC</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #000; color: #fff; text-align: center; padding: 20px; margin: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
         
@@ -45,6 +45,7 @@
         .btn-disco { background: transparent; border: 1px solid #444; color: #666; font-size: 12px; padding: 10px; margin-top: 10px; }
         
         .cata-status { font-size: 13px; color: #a55eea; margin-top: 5px; font-weight: bold; height: 20px; margin-bottom: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+        .loading-text { font-size: 12px; color: #ff9f43; display: none; margin-bottom: 10px;}
 
         @keyframes fadein { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
@@ -59,7 +60,7 @@
     <div id="view-connect" class="screen visible">
         <div class="card" style="padding: 50px 20px;">
             <div style="font-size: 50px; margin-bottom: 20px;">🔌</div>
-            <p style="color: #666; margin-bottom: 30px;">Conecta para iniciar V10 Robust.</p>
+            <p style="color: #666; margin-bottom: 30px;">Conecta para iniciar V11 Traffic Control.</p>
             <button class="btn-main btn-heat" onclick="conectar()">CONECTAR</button>
         </div>
     </div>
@@ -85,22 +86,24 @@
         </div>
 
         <div class="card">
+            <div id="trafficLight" class="loading-text">📡 ENVIANDO COMANDO...</div>
+
             <div class="slider-container">
-                <button class="btn-round" onclick="ajustar(-1)">-</button>
+                <button class="btn-round" onclick="ajustarSmart(-1)">-</button>
                 <input type="number" id="inputTemp" value="180" readonly>
-                <button class="btn-round" onclick="ajustar(1)">+</button>
+                <button class="btn-round" onclick="ajustarSmart(1)">+</button>
             </div>
             
-            <button class="btn-main btn-heat" onclick="manualEncender()">🔥 ENCENDER / ACTUALIZAR</button>
+            <button class="btn-main btn-heat" onclick="manualEncender()">🔥 FIJAR / ACTUALIZAR</button>
             <button class="btn-main btn-boost" onclick="activarBoost()">⚡ BOOST (+15°C)</button>
             
             <hr style="border-color:#333; margin: 15px 0;">
             
             <div id="cataInfo" class="cata-status"></div>
-            <button id="btnCata" class="btn-main btn-cata" onclick="iniciarCatadorRobust()">🍷 MODO CATADOR (ROBUST)</button>
+            <button id="btnCata" class="btn-main btn-cata" onclick="iniciarCatadorRobust()">🍷 MODO CATADOR</button>
             
             <button class="btn-main btn-stop" onclick="apagarTotal()">❄️ DETENER CALENTADOR</button>
-            <button class="btn-main btn-disco" onclick="desconectar()">🔌 DESCONECTAR BLUETOOTH</button>
+            <button class="btn-main btn-disco" onclick="desconectar()">🔌 DESCONECTAR</button>
         </div>
     </div>
 
@@ -119,6 +122,10 @@
         let char = {};
         let loop = null;
         let cataRunning = false;
+        
+        // --- CONTROL DE TRÁFICO (NUEVO) ---
+        let isBusy = false; // "Semáforo" para pausar lecturas
+        let debounceTimer = null; // Temporizador para botones manuales
 
         // --- CONEXIÓN ---
         async function conectar() {
@@ -143,17 +150,15 @@
                 document.getElementById('statusBadge').innerText = "ONLINE";
                 document.getElementById('statusBadge').classList.add('online');
 
+                // Iniciamos bucle de lectura
                 loop = setInterval(leerDatos, 1000);
 
             } catch (e) { alert("Error: " + e); }
         }
 
         function desconectar() {
-            if (device && device.gatt.connected) {
-                device.gatt.disconnect();
-            } else {
-                onDisconnect();
-            }
+            if (device && device.gatt.connected) device.gatt.disconnect();
+            else onDisconnect();
         }
 
         function onDisconnect() {
@@ -162,8 +167,11 @@
             location.reload(); 
         }
 
+        // --- LECTURA DE DATOS (CON SEMÁFORO) ---
         async function leerDatos() {
-            if (!char.actual) return;
+            // Si estamos escribiendo (Busy), NO leemos para evitar choques
+            if (isBusy || !char.actual) return; 
+
             try {
                 const vT = await char.actual.readValue();
                 document.getElementById('tempActual').innerText = (vT.getUint16(0, true) / 10).toFixed(1);
@@ -177,22 +185,28 @@
             } catch (e) {}
         }
 
-        // --- CONTROL Y VERIFICACIÓN ---
-        async function ajustar(delta) {
+        // --- CONTROL MANUAL INTELIGENTE (DEBOUNCE) ---
+        function ajustarSmart(delta) {
             const input = document.getElementById('inputTemp');
             let val = parseInt(input.value) + delta;
             if (val > 210) val = 210;
             if (val < 40) val = 40;
             input.value = val;
             
-            // Envío rápido
-            if (char.target) {
-                try { await write(char.target, val * 10); } catch(e) {}
-            }
+            // 1. Cancelamos envío anterior si el usuario sigue pulsando
+            if (debounceTimer) clearTimeout(debounceTimer);
+
+            // 2. Esperamos 500ms a que deje de pulsar
+            debounceTimer = setTimeout(() => {
+                manualEncender(val);
+            }, 500);
         }
 
-        // NUEVA FUNCIÓN MAESTRA: Envía y VERIFICA que se haya enviado
+        // FUNCIÓN MAESTRA DE ENVÍO ROBUSTO
         async function enviarTemperaturaSegura(grados) {
+            isBusy = true; // 🔴 SEMÁFORO ROJO: Pausar lecturas
+            document.getElementById('trafficLight').style.display = 'block';
+
             let intentos = 0;
             let exito = false;
 
@@ -200,28 +214,24 @@
                 try {
                     // 1. Enviar Target
                     await write(char.target, grados * 10);
-                    // 2. Encender
+                    // 2. Encender (Confirmar orden)
                     await write(char.on, 1);
                     
-                    // 3. Pausa breve para que el chip procese
                     await new Promise(r => setTimeout(r, 600));
 
-                    // 4. VERIFICACIÓN: ¿El vape cambió su objetivo?
+                    // 3. Verificación
                     const lectura = await char.target.readValue();
                     const leido = lectura.getUint16(0, true) / 10;
 
-                    if (Math.abs(leido - grados) < 1) {
-                        exito = true; // ¡Sí, lo hizo!
-                    } else {
-                        console.log(`Intento ${intentos+1} fallido. Leído: ${leido}, Esperado: ${grados}`);
-                        // Si falló, mostramos feedback visual si estamos en catador
-                        if (cataRunning) {
-                            document.getElementById('cataInfo').innerText = `⚠️ Reintentando enviar ${grados}°C...`;
-                        }
-                    }
+                    if (Math.abs(leido - grados) < 1) exito = true; 
+                    else console.log(`Reintentando... Leído: ${leido}`);
+
                 } catch (e) { console.log(e); }
                 intentos++;
             }
+            
+            document.getElementById('trafficLight').style.display = 'none';
+            isBusy = false; // 🟢 SEMÁFORO VERDE: Reanudar lecturas
             return exito;
         }
 
@@ -237,7 +247,7 @@
             if (boostTemp > 210) boostTemp = 210;
             document.getElementById('inputTemp').value = boostTemp;
             await manualEncender(boostTemp);
-            alert(`🚀 BOOST: Subiendo a ${boostTemp}°C`);
+            alert(`🚀 BOOST: ${boostTemp}°C`);
         }
 
         // --- MODO CATADOR ROBUST ---
@@ -256,28 +266,18 @@
 
             for (let i = 0; i < pasos.length; i++) {
                 if (!cataRunning) break;
-                
                 const target = pasos[i];
                 info.innerText = `Paso ${i+1}/${pasos.length}: Enviando ${target}°C...`;
                 document.getElementById('inputTemp').value = target;
 
-                // USAR LA FUNCIÓN SEGURA
-                const enviadoOK = await enviarTemperaturaSegura(target);
+                // Usamos la función segura con semáforo
+                await enviarTemperaturaSegura(target);
                 
-                if (!enviadoOK) {
-                    info.innerText = "❌ Error comunicación. Saltando paso...";
-                    await new Promise(r => setTimeout(r, 2000));
-                    continue; // Saltamos al siguiente si falla mucho
-                }
-
                 info.innerText = `Subiendo a ${target}°C...`;
-
-                // Esperar llegada con timeout de 90s
                 await esperarLlegadaTemperatura(target);
 
                 if (!cataRunning) break;
 
-                // Cuenta regresiva
                 for (let s = tiempoSesion; s > 0; s--) {
                     if (!cataRunning) break;
                     info.innerText = `🔥 Saboreando ${target}°C - Quedan ${s}s`;
@@ -286,11 +286,11 @@
             }
 
             if (cataRunning) {
-                info.innerText = "✅ ¡Sesión Finalizada!";
+                info.innerText = "✅ ¡Fin de Sesión!";
                 alert("Modo Catador Terminado");
                 cataRunning = false;
                 btn.style.background = ""; 
-                btn.innerText = "🍷 MODO CATADOR (ROBUST)";
+                btn.innerText = "🍷 MODO CATADOR";
                 btn.onclick = iniciarCatadorRobust;
             }
         }
@@ -304,13 +304,8 @@
                     
                     if (!cataRunning) { clearInterval(check); resolve(); return; }
 
-                    if (actual >= (meta - 3)) {
-                        clearInterval(check);
-                        resolve();
-                    }
-                    
-                    // Timeout de seguridad 90s
-                    if (intentos > 90) { clearInterval(check); resolve(); }
+                    if (actual >= (meta - 3)) { clearInterval(check); resolve(); }
+                    if (intentos > 90) { clearInterval(check); resolve(); } // Timeout
                 }, 1000);
             });
         }
@@ -318,11 +313,15 @@
         async function apagarTotal() {
             cataRunning = false;
             document.getElementById('cataInfo').innerText = "Detenido.";
+            
+            isBusy = true; // Pausar lecturas para apagar bien
             await write(char.off, 1);
             await write(char.target, 0);
+            isBusy = false;
         }
 
         async function write(c, v) {
+            if(!c) return;
             const b = new ArrayBuffer(2);
             new DataView(b).setUint16(0, v, true);
             await c.writeValue(b);
