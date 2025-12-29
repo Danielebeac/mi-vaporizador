@@ -3,223 +3,132 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crafty+ Master Control (Fixed)</title>
+    <title>Crafty+ Universal Fix</title>
     <style>
-        body { font-family: 'Courier New', monospace; background-color: #050505; color: #00ffcc; text-align: center; padding: 20px; margin: 0; }
-        h1 { text-shadow: 0 0 10px #00ffcc; margin-bottom: 5px; font-size: 1.5rem; }
-        .status { color: #888; font-size: 0.8rem; margin-bottom: 20px; }
-        
-        /* Tarjetas */
-        .card { background: #1a1a1a; border: 1px solid #333; border-radius: 12px; padding: 15px; margin: 15px auto; max-width: 320px; box-shadow: 0 4px 15px rgba(0,255,204,0.1); }
-        .value { font-size: 48px; font-weight: bold; color: #fff; margin: 10px 0; }
-        .sub-value { font-size: 14px; color: #aaa; }
-
-        /* Botones */
-        button { border: none; padding: 15px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; width: 100%; margin-top: 10px; transition: transform 0.1s; }
-        button:active { transform: scale(0.98); }
-        .btn-connect { background: linear-gradient(45deg, #00b09b, #96c93d); color: #000; }
-        .btn-set { background: #e67e22; color: white; }
-        .btn-cata { background: linear-gradient(45deg, #8e44ad, #c0392b); color: white; box-shadow: 0 0 10px #8e44ad; }
-        .btn-off { background: #444; color: #fff; }
-
-        input { font-size: 24px; padding: 5px; width: 80px; text-align: center; background: #222; border: 1px solid #444; color: white; border-radius: 5px; }
-        
-        /* Logs */
-        #logs { font-size: 10px; color: #555; text-align: left; margin-top: 30px; border-top: 1px solid #333; padding: 10px; height: 150px; overflow-y: scroll; background: #000; }
+        body { font-family: monospace; background: #000; color: #0f0; text-align: center; padding: 20px; }
+        .box { border: 1px solid #333; margin: 10px; padding: 10px; border-radius: 10px; }
+        button { padding: 15px; width: 100%; font-weight: bold; cursor: pointer; margin-top:5px; border-radius: 5px; border:none;}
+        .btn-con { background: #00f; color: white; }
+        .btn-hot { background: #f60; color: white; }
+        input { font-size: 20px; text-align: center; width: 80px; background: #333; color: white; border: none; padding: 5px;}
     </style>
 </head>
 <body>
+    <h1>🛠️ CRAFTY+ DEBUGGER</h1>
+    
+    <button class="btn-con" id="btn" onclick="conectar()">1. CONECTAR Y ESCANEAR</button>
+    <div id="status">Desconectado</div>
 
-    <h1>🌫️ CRAFTY+ MASTER</h1>
-    <div id="statusText" class="status">Desconectado</div>
-
-    <div id="connectPanel">
-        <button class="btn-connect" onclick="connect()">🔌 CONECTAR DISPOSITIVO</button>
-    </div>
-
-    <div id="app" style="display:none;">
-        
-        <div class="card" style="border-color: #8e44ad;">
-            <small>🍷 MODO CATADOR</small>
-            <div id="cataStatus" class="sub-value">Listo para iniciar</div>
-            <button class="btn-cata" onclick="startCata()">▶ INICIAR SESIÓN</button>
-            <p style="font-size:10px; color:#aaa;">Inicia en 175°C y sube cada 45s</p>
+    <div id="panel" style="display:none">
+        <div class="box">
+            TEMP: <span id="tempVal">--</span>°C <br>
+            BATT: <span id="battVal">--</span>%
         </div>
 
-        <div class="card">
-            <small>TEMPERATURA ACTUAL</small>
-            <div id="tempDisplay" class="value">--.-</div>
-            <small>OBJETIVO: <span id="targetDisplay">--</span>°C</small>
-        </div>
-
-        <div class="card">
-            <small>CONTROL MANUAL</small>
-            <br><br>
-            <input type="number" id="targetInput" value="180"> °C
-            <button class="btn-set" onclick="setTemperature()">FIJAR TEMPERATURA</button>
-            <button class="btn-off" onclick="setTemperature(0)">DETENER (OFF)</button>
-        </div>
-
-        <div class="card">
-            <small>BATERÍA</small>
-            <div id="batDisplay" class="value" style="font-size:24px;">--%</div>
+        <div class="box">
+            <input type="number" id="inputT" value="180">
+            <button class="btn-hot" onclick="escribirTemp()">2. FIJAR TEMP (ENCENDER)</button>
         </div>
     </div>
 
-    <div id="logs"></div>
+    <div id="logs" style="text-align: left; font-size: 10px; color: #888; margin-top:20px;"></div>
 
     <script>
-        // --- CONFIGURACIÓN TÉCNICA (UUIDs) ---
-        // Mantenemos tu lógica de sufijos que funcionaba
-        const SUFFIX = '-4c45-4b43-4942-265a524f5453';
-        const SERVICE_MAIN = '00000001' + SUFFIX; 
-        const CHAR_BATTERY = '00000003' + SUFFIX; // <--- AGREGADO: UUID Batería Real
-        const CHAR_TEMP    = '00000011' + SUFFIX; 
-        const CHAR_TARGET  = '00000021' + SUFFIX; 
-        
-        // Variables globales
-        let deviceCache = null;
-        let cache = {};
-        let pollingInterval;
+        // --- TUS UUIDs (STORZ & BICKEL) ---
+        const SB_SERVICE = '00000001-4c45-4b43-4942-265a524f5453'; // Servicio Principal
+        const UUID_TEMP  = '00000011-4c45-4b43-4942-265a524f5453'; // Lectura Temp
+        const UUID_WRITE = '00000021-4c45-4b43-4942-265a524f5453'; // Escritura Temp
 
-        function log(msg) {
-            const logDiv = document.getElementById('logs');
-            logDiv.innerHTML = `> ${msg}<br>` + logDiv.innerHTML;
+        // --- UUID ESTÁNDAR (El truco para la batería) ---
+        const BATTERY_SERVICE = '0000180f-0000-1000-8000-00805f9b34fb'; 
+        const BATTERY_CHAR    = '00002a19-0000-1000-8000-00805f9b34fb';
+
+        let cache = {};
+
+        function log(m) { 
+            console.log(m); 
+            document.getElementById('logs').innerHTML += `> ${m}<br>`; 
         }
 
-        async function connect() {
+        async function conectar() {
             try {
-                log("Solicitando conexión...");
-                // Usamos TU filtro original que sí funciona
+                log("Buscando...");
+                // IMPORTANTE: Pedimos acceso al servicio S&B Y al servicio de Batería estándar
                 const device = await navigator.bluetooth.requestDevice({
-                    filters: [{ namePrefix: 'STORZ' }], 
-                    optionalServices: [SERVICE_MAIN] 
+                    filters: [{ namePrefix: 'STORZ' }],
+                    optionalServices: [SB_SERVICE, BATTERY_SERVICE] 
                 });
 
-                deviceCache = device;
-                document.getElementById('statusText').innerText = "Conectando a: " + device.name;
-                
+                log("Conectando GATT...");
                 const server = await device.gatt.connect();
-                const service = await server.getPrimaryService(SERVICE_MAIN);
-                log("Servicio principal OK");
+                document.getElementById('btn').style.display = 'none';
+                document.getElementById('status').innerText = "Conectado!";
+                document.getElementById('panel').style.display = 'block';
 
-                // --- MAPEO DE CARACTERÍSTICAS (Corregido) ---
-                try { cache['temp'] = await service.getCharacteristic(CHAR_TEMP); } catch(e) { log("Error Temp: " + e); }
-                try { cache['target'] = await service.getCharacteristic(CHAR_TARGET); } catch(e) { log("Error Target: " + e); }
-                
-                // Intentamos conectar la batería específicamente
-                try { 
-                    cache['battery'] = await service.getCharacteristic(CHAR_BATTERY); 
-                    log("Batería detectada correctamente");
-                } catch(e) { 
-                    log("No se pudo acceder a lectura directa de batería"); 
+                // 1. INTENTAR LEER BATERÍA (ESTÁNDAR)
+                try {
+                    const batService = await server.getPrimaryService(BATTERY_SERVICE);
+                    const batChar = await batService.getCharacteristic(BATTERY_CHAR);
+                    cache['batt'] = batChar;
+                    log("Servicio Batería Estándar: OK");
+                    leerBateria();
+                } catch(e) {
+                    log("⚠️ No se encontró Batería Estándar. Buscando en S&B...");
+                    // Si falla, intentamos buscarla en el servicio S&B (tu código anterior)
                 }
 
-                // UI setup
-                document.getElementById('connectPanel').style.display = 'none';
-                document.getElementById('app').style.display = 'block';
+                // 2. OBTENER SERVICIO PRINCIPAL S&B
+                const sbService = await server.getPrimaryService(SB_SERVICE);
+                
+                // Temp Actual
+                cache['temp'] = await sbService.getCharacteristic(UUID_TEMP);
+                setInterval(leerTemp, 2000); // Leer cada 2s
 
-                // Iniciar bucle de lectura automática
-                startPolling();
+                // Escritura
+                cache['write'] = await sbService.getCharacteristic(UUID_WRITE);
+                log("Control de Escritura: OK");
 
-            } catch (err) {
-                alert("Error de conexión: " + err);
-                log("Error: " + err);
+            } catch(e) {
+                log("ERROR FATAL: " + e);
+                alert("Error: " + e);
             }
         }
 
-        async function startPolling() {
-            // Leemos datos cada 2 segundos
-            pollingInterval = setInterval(async () => {
-                
-                // 1. LEER TEMPERATURA
-                if (cache['temp']) {
-                    try {
-                        const val = await cache['temp'].readValue();
-                        const cel = val.getUint16(0, true) / 10;
-                        document.getElementById('tempDisplay').innerText = cel.toFixed(1) + "°C";
-                    } catch(e) { console.log(e); }
-                }
-
-                // 2. LEER BATERÍA (Corrección)
-                if (cache['battery']) {
-                    try {
-                        const val = await cache['battery'].readValue();
-                        const batLevel = val.getUint16(0, true); // Storz suele usar Uint16 para bateria
-                        document.getElementById('batDisplay').innerText = batLevel + "%";
-                    } catch(e) { 
-                         // Fallback por si es Uint8 en modelos viejos
-                         try {
-                             const val = await cache['battery'].readValue();
-                             const batLevel = val.getUint8(0);
-                             document.getElementById('batDisplay').innerText = batLevel + "%";
-                         } catch(err) { console.log(err); }
-                    }
-                }
-
-            }, 2000);
-        }
-
-        // --- FUNCIÓN DE CONTROL (ENCENDER / CAMBIAR TEMP) ---
-        async function setTemperature(val = null) {
-            if (!cache['target']) return alert("Error: No hay conexión de control");
-            
-            // Si pasamos 0, es apagar. Si no, leemos el input.
-            let num = val !== null ? val : parseInt(document.getElementById('targetInput').value);
-            
-            // Actualizar UI
-            if (num > 0) {
-                document.getElementById('targetDisplay').innerText = num;
-                document.getElementById('targetInput').value = num;
-            } else {
-                document.getElementById('targetDisplay').innerText = "OFF";
-            }
-
-            // CORRECCIÓN IMPORTANTE: Usar DataView para Little Endian
+        async function leerBateria() {
+            if(!cache['batt']) return;
             try {
-                const valorEnviar = num * 10; // Ejemplo: 180 -> 1800
-                const buffer = new ArrayBuffer(2);
-                const view = new DataView(buffer);
-                view.setUint16(0, valorEnviar, true); // 'true' asegura el orden de bytes correcto
-
-                await cache['target'].writeValue(buffer);
-                log(`Orden enviada: ${num === 0 ? 'APAGAR' : num + '°C'}`);
-                
-            } catch (e) {
-                log("Error al escribir comando: " + e);
-            }
+                const val = await cache['batt'].readValue();
+                const pct = val.getUint8(0);
+                document.getElementById('battVal').innerText = pct;
+                log("Batería actualizada: " + pct + "%");
+            } catch(e) { log("Error leyendo bat: " + e); }
         }
 
-        // --- LÓGICA MODO CATADOR ---
-        async function startCata() {
-            const pasos = [175, 180, 185, 190, 195];
-            const tiempoEntrePasos = 45000; // 45 segundos
-            
-            let btn = document.querySelector('.btn-cata');
-            let status = document.getElementById('cataStatus');
-            
-            btn.disabled = true;
-            btn.style.background = "#555";
-            btn.innerText = "⏳ SESIÓN EN CURSO...";
+        async function leerTemp() {
+            if(!cache['temp']) return;
+            try {
+                const val = await cache['temp'].readValue();
+                const c = val.getUint16(0, true) / 10;
+                document.getElementById('tempVal').innerText = c.toFixed(1);
+            } catch(e) {}
+        }
 
-            for (let i = 0; i < pasos.length; i++) {
-                let temp = pasos[i];
-                status.innerText = `Paso ${i+1}/${pasos.length}: Calentando a ${temp}°C`;
-                log(`[CATADOR] Subiendo a ${temp}°C`);
-                
-                await setTemperature(temp);
-                
-                // Esperar tiempo
-                if (i < pasos.length - 1) {
-                    await new Promise(r => setTimeout(r, tiempoEntrePasos));
-                }
+        async function escribirTemp() {
+            if(!cache['write']) return alert("No conectado");
+            const t = document.getElementById('inputT').value;
+            const val = t * 10;
+            
+            try {
+                // Escritura Little Endian
+                const buffer = new ArrayBuffer(2);
+                new DataView(buffer).setUint16(0, val, true);
+                await cache['write'].writeValue(buffer);
+                log(`Comando enviado: ${t}°C`);
+                alert(`Calentando a ${t}°C`);
+            } catch(e) {
+                log("Error escritura: " + e);
+                alert("Error al escribir. Mira el log.");
             }
-
-            status.innerText = "✅ Sesión Finalizada (195°C)";
-            btn.disabled = false;
-            btn.innerText = "▶ INICIAR SESIÓN";
-            btn.style.background = "linear-gradient(45deg, #8e44ad, #c0392b)";
-            alert("¡Sesión de cata terminada!");
         }
     </script>
 </body>
