@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control Crafty+ (Clon)</title>
+    <style>
+        body { font-family: monospace; background-color: #121212; color: #00ff00; text-align: center; padding: 20px; }
+        h1 { color: #ffffff; }
+        .data-box { border: 2px solid #333; padding: 20px; margin: 10px auto; max-width: 300px; border-radius: 10px; background: #1e1e1e; }
+        .big-text { font-size: 40px; font-weight: bold; }
+        button { background: #ff6600; color: white; border: none; padding: 15px 30px; font-size: 18px; margin-top: 20px; cursor: pointer; border-radius: 5px; width: 100%; }
+        input { padding: 10px; font-size: 18px; width: 60px; text-align: center; }
+        #status { color: yellow; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+    <h1>🤖 CRAFTY+ CONTROLLER</h1>
+    <div id="status">Desconectado</div>
+
+    <button id="btnConnect" onclick="connectToCrafty()">🔌 CONECTAR CRAFTY+</button>
+
+    <div id="controls" style="display:none;">
+        <div class="data-box">
+            <div>TEMPERATURA ACTUAL</div>
+            <div id="currentTemp" class="big-text">--.-°C</div>
+        </div>
+
+        <div class="data-box">
+            <div>OBJETIVO</div>
+            <input type="number" id="targetInput" value="180"> °C
+            <button onclick="writeTemperature()" style="background: #0099ff; margin-top: 10px;">ESTABLECER</button>
+        </div>
+
+        <div class="data-box">
+            <div>BATERÍA</div>
+            <div id="batteryLevel">--%</div>
+        </div>
+    </div>
+
+    <script>
+        // --- LOS SECRETOS DE STORZ & BICKEL (UUIDs) ---
+        const SB_SERVICE = '10100000-5354-4f52-5a26-4249434b454c';
+        const UUID_TEMP_CURRENT = '10110001-5354-4f52-5a26-4249434b454c';
+        const UUID_TEMP_TARGET  = '10110003-5354-4f52-5a26-4249434b454c';
+        const UUID_BATTERY      = '10110004-5354-4f52-5a26-4249434b454c';
+
+        let deviceCache = null;
+        let characteristicCache = {};
+
+        async function connectToCrafty() {
+            try {
+                document.getElementById('status').innerText = "Buscando...";
+                
+                // 1. Escanear buscando el servicio S&B
+                const device = await navigator.bluetooth.requestDevice({
+                    filters: [{ services: [SB_SERVICE] }]
+                });
+
+                document.getElementById('status').innerText = "Conectando...";
+                const server = await device.gatt.connect();
+                const service = await server.getPrimaryService(SB_SERVICE);
+
+                // 2. Obtener características (Temp Actual, Target, Batería)
+                characteristicCache['current'] = await service.getCharacteristic(UUID_TEMP_CURRENT);
+                characteristicCache['target'] = await service.getCharacteristic(UUID_TEMP_TARGET);
+                characteristicCache['battery'] = await service.getCharacteristic(UUID_BATTERY);
+
+                // 3. Iniciar lectura automática
+                document.getElementById('btnConnect').style.display = 'none';
+                document.getElementById('controls').style.display = 'block';
+                document.getElementById('status').innerText = "✅ CONECTADO: " + device.name;
+                document.getElementById('status').style.color = '#00ff00';
+
+                startMonitoring();
+
+            } catch (error) {
+                console.error(error);
+                document.getElementById('status').innerText = "❌ Error: " + error;
+            }
+        }
+
+        async function startMonitoring() {
+            setInterval(async () => {
+                // Leer Temperatura Actual
+                const valTemp = await characteristicCache['current'].readValue();
+                const tempC = valTemp.getUint16(0, true) / 10; // Viene en decigrados (ej: 1800 = 180.0)
+                document.getElementById('currentTemp').innerText = tempC.toFixed(1) + "°C";
+
+                // Leer Batería
+                const valBat = await characteristicCache['battery'].readValue();
+                const batLevel = valBat.getUint16(0, true);
+                document.getElementById('batteryLevel').innerText = batLevel + "%";
+            }, 1000); // Actualizar cada segundo
+        }
+
+        async function writeTemperature() {
+            const inputVal = document.getElementById('targetInput').value;
+            const targetVal = parseInt(inputVal) * 10; // Convertir a decigrados (180 -> 1800)
+            
+            // Crear el buffer para enviar por Bluetooth
+            const buffer = new Uint16Array([targetVal]); 
+            
+            await characteristicCache['target'].writeValue(buffer);
+            alert("Temperatura enviada: " + inputVal + "°C");
+        }
+    </script>
+</body>
+</html>
