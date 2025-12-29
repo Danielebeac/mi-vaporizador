@@ -3,131 +3,87 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crafty+ Universal Fix</title>
+    <title>S&B Scanner</title>
     <style>
-        body { font-family: monospace; background: #000; color: #0f0; text-align: center; padding: 20px; }
-        .box { border: 1px solid #333; margin: 10px; padding: 10px; border-radius: 10px; }
-        button { padding: 15px; width: 100%; font-weight: bold; cursor: pointer; margin-top:5px; border-radius: 5px; border:none;}
-        .btn-con { background: #00f; color: white; }
-        .btn-hot { background: #f60; color: white; }
-        input { font-size: 20px; text-align: center; width: 80px; background: #333; color: white; border: none; padding: 5px;}
+        body { background-color: #000; color: #0f0; font-family: monospace; padding: 20px; }
+        button { font-size: 20px; padding: 15px; width: 100%; background: #222; color: #fff; border: 1px solid #555; cursor: pointer; }
+        #log { margin-top: 20px; white-space: pre-wrap; word-wrap: break-word; font-size: 12px; text-align: left; }
+        .uuid { color: #ffff00; }
+        .val { color: #00ffff; }
+        .prop { color: #ff00ff; }
     </style>
 </head>
 <body>
-    <h1>🛠️ CRAFTY+ DEBUGGER</h1>
+    <h1>🔍 ESCÁNER DE UUIDs</h1>
+    <p>Este script listará todas las características disponibles dentro del servicio principal.</p>
     
-    <button class="btn-con" id="btn" onclick="conectar()">1. CONECTAR Y ESCANEAR</button>
-    <div id="status">Desconectado</div>
-
-    <div id="panel" style="display:none">
-        <div class="box">
-            TEMP: <span id="tempVal">--</span>°C <br>
-            BATT: <span id="battVal">--</span>%
-        </div>
-
-        <div class="box">
-            <input type="number" id="inputT" value="180">
-            <button class="btn-hot" onclick="escribirTemp()">2. FIJAR TEMP (ENCENDER)</button>
-        </div>
-    </div>
-
-    <div id="logs" style="text-align: left; font-size: 10px; color: #888; margin-top:20px;"></div>
+    <button onclick="escanear()">INICIAR ESCANEO</button>
+    
+    <div id="log">Esperando...</div>
 
     <script>
-        // --- TUS UUIDs (STORZ & BICKEL) ---
-        const SB_SERVICE = '00000001-4c45-4b43-4942-265a524f5453'; // Servicio Principal
-        const UUID_TEMP  = '00000011-4c45-4b43-4942-265a524f5453'; // Lectura Temp
-        const UUID_WRITE = '00000021-4c45-4b43-4942-265a524f5453'; // Escritura Temp
-
-        // --- UUID ESTÁNDAR (El truco para la batería) ---
-        const BATTERY_SERVICE = '0000180f-0000-1000-8000-00805f9b34fb'; 
-        const BATTERY_CHAR    = '00002a19-0000-1000-8000-00805f9b34fb';
-
-        let cache = {};
-
-        function log(m) { 
-            console.log(m); 
-            document.getElementById('logs').innerHTML += `> ${m}<br>`; 
+        function log(msg) {
+            document.getElementById('log').innerHTML += msg + "\n";
         }
 
-        async function conectar() {
+        async function escanear() {
+            document.getElementById('log').innerHTML = "Iniciando...\n";
+            
+            // EL SERVICIO PRINCIPAL QUE YA SABEMOS QUE FUNCIONA
+            const SERVICE_UUID = '00000001-4c45-4b43-4942-265a524f5453';
+
             try {
-                log("Buscando...");
-                // IMPORTANTE: Pedimos acceso al servicio S&B Y al servicio de Batería estándar
                 const device = await navigator.bluetooth.requestDevice({
                     filters: [{ namePrefix: 'STORZ' }],
-                    optionalServices: [SB_SERVICE, BATTERY_SERVICE] 
+                    optionalServices: [SERVICE_UUID]
                 });
 
-                log("Conectando GATT...");
-                const server = await device.gatt.connect();
-                document.getElementById('btn').style.display = 'none';
-                document.getElementById('status').innerText = "Conectado!";
-                document.getElementById('panel').style.display = 'block';
-
-                // 1. INTENTAR LEER BATERÍA (ESTÁNDAR)
-                try {
-                    const batService = await server.getPrimaryService(BATTERY_SERVICE);
-                    const batChar = await batService.getCharacteristic(BATTERY_CHAR);
-                    cache['batt'] = batChar;
-                    log("Servicio Batería Estándar: OK");
-                    leerBateria();
-                } catch(e) {
-                    log("⚠️ No se encontró Batería Estándar. Buscando en S&B...");
-                    // Si falla, intentamos buscarla en el servicio S&B (tu código anterior)
-                }
-
-                // 2. OBTENER SERVICIO PRINCIPAL S&B
-                const sbService = await server.getPrimaryService(SB_SERVICE);
+                log(`✅ Conectado a: ${device.name}`);
                 
-                // Temp Actual
-                cache['temp'] = await sbService.getCharacteristic(UUID_TEMP);
-                setInterval(leerTemp, 2000); // Leer cada 2s
+                const server = await device.gatt.connect();
+                log("✅ Servidor GATT conectado");
 
-                // Escritura
-                cache['write'] = await sbService.getCharacteristic(UUID_WRITE);
-                log("Control de Escritura: OK");
+                const service = await server.getPrimaryService(SERVICE_UUID);
+                log("✅ Servicio Principal obtenido");
+                log("------------------------------------------------");
 
-            } catch(e) {
-                log("ERROR FATAL: " + e);
-                alert("Error: " + e);
-            }
-        }
+                // OBTENER TODAS LAS CARACTERÍSTICAS
+                const characteristics = await service.getCharacteristics();
 
-        async function leerBateria() {
-            if(!cache['batt']) return;
-            try {
-                const val = await cache['batt'].readValue();
-                const pct = val.getUint8(0);
-                document.getElementById('battVal').innerText = pct;
-                log("Batería actualizada: " + pct + "%");
-            } catch(e) { log("Error leyendo bat: " + e); }
-        }
+                for (const c of characteristics) {
+                    // Limpiamos el UUID para que sea fácil de leer (solo los primeros 8 dígitos)
+                    const shortUUID = c.uuid.substring(0, 8);
+                    
+                    let properties = [];
+                    if (c.properties.read) properties.push("READ");
+                    if (c.properties.write) properties.push("WRITE");
+                    if (c.properties.notify) properties.push("NOTIFY");
+                    
+                    let valueStr = "N/A";
 
-        async function leerTemp() {
-            if(!cache['temp']) return;
-            try {
-                const val = await cache['temp'].readValue();
-                const c = val.getUint16(0, true) / 10;
-                document.getElementById('tempVal').innerText = c.toFixed(1);
-            } catch(e) {}
-        }
+                    // Intentamos leer el valor si es posible
+                    if (c.properties.read) {
+                        try {
+                            const val = await c.readValue();
+                            // Intentamos interpretar el valor de varias formas
+                            const int8 = val.getUint8(0);
+                            const int16 = val.byteLength >= 2 ? val.getUint16(0, true) : "N/A";
+                            valueStr = `(Int8: ${int8}) | (Int16: ${int16})`;
+                        } catch (err) {
+                            valueStr = "Error lectura";
+                        }
+                    }
 
-        async function escribirTemp() {
-            if(!cache['write']) return alert("No conectado");
-            const t = document.getElementById('inputT').value;
-            const val = t * 10;
-            
-            try {
-                // Escritura Little Endian
-                const buffer = new ArrayBuffer(2);
-                new DataView(buffer).setUint16(0, val, true);
-                await cache['write'].writeValue(buffer);
-                log(`Comando enviado: ${t}°C`);
-                alert(`Calentando a ${t}°C`);
-            } catch(e) {
-                log("Error escritura: " + e);
-                alert("Error al escribir. Mira el log.");
+                    log(`<span class="uuid">UUID: ...${shortUUID}</span>`);
+                    log(`   Props: <span class="prop">[${properties.join(', ')}]</span>`);
+                    log(`   Valor: <span class="val">${valueStr}</span>`);
+                    log("------------------------------------------------");
+                }
+                
+                log("🏁 ESCANEO FINALIZADO");
+
+            } catch (error) {
+                log("❌ ERROR: " + error);
             }
         }
     </script>
