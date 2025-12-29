@@ -3,120 +3,207 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>S&B LABORATORY</title>
+    <title>CRAFTY+ FINAL V4</title>
     <style>
-        body { font-family: monospace; background-color: #111; color: #fff; text-align: center; padding: 20px; }
-        h2 { color: #ffff00; }
-        .card { background: #222; padding: 20px; border-radius: 10px; border: 1px solid #444; margin: 10px auto; max-width: 400px; }
+        body { font-family: 'Verdana', sans-serif; background-color: #000; color: #fff; text-align: center; padding: 20px; margin: 0; }
         
-        button { 
-            width: 100%; padding: 15px; margin: 5px 0; font-size: 16px; font-weight: bold; cursor: pointer; border: none; border-radius: 5px; 
-        }
-        .btn-con { background: #0088ff; color: white; }
-        .btn-exp { background: #333; color: #aaa; border: 1px solid #555; text-align: left; padding-left: 20px;}
-        .btn-exp:active { background: #fff; color: #000; }
+        /* ESTILOS DE ESTADO */
+        .header { margin-bottom: 20px; }
+        .badge { padding: 5px 10px; border-radius: 5px; font-weight: bold; font-size: 14px; }
+        .badge-no { background-color: #ff0000; color: #fff; }
+        .badge-ok { background-color: #00ff00; color: #000; }
 
-        .log-box { height: 150px; overflow-y: scroll; background: #000; border: 1px solid #333; text-align: left; padding: 10px; font-size: 12px; color: #0f0; margin-top: 20px;}
+        /* TARJETAS */
+        .card { background: #111; border: 1px solid #333; border-radius: 15px; padding: 20px; margin: 15px auto; max-width: 350px; box-shadow: 0 0 20px rgba(0,255,0,0.1); }
+        
+        .temp-big { font-size: 56px; font-weight: bold; color: #00e5ff; text-shadow: 0 0 15px rgba(0, 229, 255, 0.6); margin: 15px 0; }
+        .label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 2px; }
+        
+        /* DATOS SECUNDARIOS */
+        .stats-row { display: flex; justify-content: space-between; margin-top: 15px; padding-top: 15px; border-top: 1px solid #222; }
+        .stat-val { font-size: 20px; font-weight: bold; }
+        
+        /* BOTONES */
+        button { border: none; padding: 18px; font-size: 16px; font-weight: bold; border-radius: 12px; cursor: pointer; width: 100%; margin-top: 12px; transition: 0.2s; }
+        button:active { transform: scale(0.95); opacity: 0.8; }
+        
+        .btn-connect { background: #fff; color: #000; }
+        /* Botón de Calentar estilo "Lava" */
+        .btn-on { background: linear-gradient(135deg, #ff9966, #ff5e62); color: white; font-size: 22px; box-shadow: 0 4px 15px rgba(255, 94, 98, 0.4); }
+        .btn-off { background: #333; color: #ccc; }
+
+        input[type="number"] { background: #222; border: 1px solid #444; color: #fff; font-size: 24px; padding: 10px; width: 90px; text-align: center; border-radius: 8px; }
+
+        /* CONSOLA */
+        #logs { font-family: monospace; font-size: 10px; color: #555; text-align: left; margin-top: 30px; border-top: 1px solid #222; padding-top: 10px; height: 100px; overflow-y: auto; }
     </style>
 </head>
 <body>
 
-    <h2>🧪 LABORATORIO CRAFTY+</h2>
-    
-    <div id="panel-connect">
-        <button class="btn-con" onclick="conectar()">1. INICIAR EXPERIMENTO</button>
+    <div class="header">
+        <h2>🔥 CRAFTY+ V4</h2>
+        <span id="statusBadge" class="badge badge-no">DESCONECTADO</span>
     </div>
 
-    <div id="panel-test" style="display:none;">
+    <div id="screen-connect">
         <div class="card">
-            <h3>PRUEBA DE ENCENDIDO</h3>
-            <p>Presiona uno por uno. Si vibra o enciende LED rojo, ¡BINGO!</p>
-            
-            <button class="btn-exp" onclick="probar('TARGET', 1800)">🔴 BOTÓN A (Target 180°C)</button>
-            <button class="btn-exp" onclick="probar('81', 1)">🔵 BOTÓN B (UUID ...81)</button>
-            <button class="btn-exp" onclick="probar('91', 1)">🟣 BOTÓN C (UUID ...91)</button>
-            <button class="btn-exp" onclick="probar('A1', 1)">🟡 BOTÓN D (UUID ...A1)</button>
-            <button class="btn-exp" onclick="probar('B1', 1)">⚪ BOTÓN E (UUID ...B1)</button>
-            <hr>
-            <button class="btn-exp" style="color:red" onclick="probar('TARGET', 0)">❌ APAGAR TODO (Reset)</button>
+            <p>Control Web Bluetooth</p>
+            <button class="btn-connect" onclick="conectar()">🔌 CONECTAR DISPOSITIVO</button>
         </div>
-        <p>Estado: <span id="status">Esperando...</span></p>
     </div>
 
-    <div id="logs" class="log-box">Log del sistema...</div>
+    <div id="screen-app" style="display:none;">
+        
+        <div class="card">
+            <div class="label">Temperatura Actual</div>
+            <div id="tempActual" class="temp-big">--.-°C</div>
+            
+            <div class="stats-row">
+                <div>
+                    <div class="label">Objetivo</div>
+                    <div id="tempTarget" class="stat-val" style="color: #ff9966;">--°C</div>
+                </div>
+                <div>
+                    <div class="label">Batería</div>
+                    <div id="batteryLevel" class="stat-val" style="color: #00ff00;">--%</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="label">Panel de Control</div>
+            <br>
+            <div style="display:flex; align-items:center; justify-content:center; gap:10px;">
+                <input type="number" id="inputTemp" value="180"> 
+                <span style="font-size: 20px;">°C</span>
+            </div>
+            
+            <button class="btn-on" onclick="encender()">🔥 CALENTAR</button>
+            <button class="btn-off" onclick="apagar()">❄️ DETENER</button>
+        </div>
+    </div>
+
+    <div id="logs">Esperando...</div>
 
     <script>
-        // UUIDS CONSTANTES
+        // --- CONFIGURACIÓN DE PUERTAS (UUIDs) ---
         const SUFFIX = '-4c45-4b43-4942-265a524f5453';
-        const SERVICE = '00000001' + SUFFIX;
+        const SERVICE_MAIN = '00000001' + SUFFIX;
+        
+        const UUID_TEMP_ACTUAL = '00000011' + SUFFIX; 
+        const UUID_TEMP_TARGET = '00000021' + SUFFIX; // Para decirle "CUÁNTO"
+        const UUID_BATERIA     = '00000041' + SUFFIX; 
+        
+        // ¡LOS NUEVOS DESCUBRIMIENTOS!
+        const UUID_SWITCH_ON   = '00000081' + SUFFIX; // Botón B (START)
+        const UUID_SWITCH_OFF  = '00000091' + SUFFIX; // Botón C (STOP)
 
-        // MAPA DE PUERTAS
-        const UUIDS = {
-            'TARGET': '00000021' + SUFFIX,
-            '81':     '00000081' + SUFFIX,
-            '91':     '00000091' + SUFFIX,
-            'A1':     '000000a1' + SUFFIX,
-            'B1':     '000000b1' + SUFFIX
-        };
-
-        let deviceCache = null;
-        let characteristics = {};
+        let cache = { temp: null, target: null, batt: null, on: null, off: null };
 
         function log(msg) {
+            const d = new Date();
             const l = document.getElementById('logs');
-            l.innerHTML = `> ${msg}<br>` + l.innerHTML;
+            l.innerHTML = `[${d.toLocaleTimeString()}] ${msg}<br>` + l.innerHTML;
         }
 
         async function conectar() {
             try {
-                log("Buscando dispositivo...");
+                log("Buscando Crafty...");
                 const device = await navigator.bluetooth.requestDevice({
                     filters: [{ namePrefix: 'STORZ' }],
-                    optionalServices: [SERVICE]
+                    optionalServices: [SERVICE_MAIN]
                 });
 
                 log("Conectando...");
                 const server = await device.gatt.connect();
-                const service = await server.getPrimaryService(SERVICE);
+                const service = await server.getPrimaryService(SERVICE_MAIN);
                 
-                log("Obteniendo accesos de escritura...");
+                log("Obteniendo controles...");
+                cache.temp   = await service.getCharacteristic(UUID_TEMP_ACTUAL);
+                cache.target = await service.getCharacteristic(UUID_TEMP_TARGET);
+                cache.batt   = await service.getCharacteristic(UUID_BATERIA);
                 
-                // Intentamos conectar con TODAS las puertas posibles
-                for (let key in UUIDS) {
-                    try {
-                        characteristics[key] = await service.getCharacteristic(UUIDS[key]);
-                        log(`✅ Acceso a UUID ...${key} OK`);
-                    } catch (e) {
-                        log(`⚠️ No se pudo acceder a ...${key}`);
-                    }
-                }
+                // Conectar los interruptores
+                cache.on     = await service.getCharacteristic(UUID_SWITCH_ON);
+                cache.off    = await service.getCharacteristic(UUID_SWITCH_OFF);
 
-                document.getElementById('panel-connect').style.display = 'none';
-                document.getElementById('panel-test').style.display = 'block';
-                document.getElementById('status').innerText = "CONECTADO - Listo para probar";
+                // Actualizar Interfaz
+                document.getElementById('screen-connect').style.display = 'none';
+                document.getElementById('screen-app').style.display = 'block';
+                document.getElementById('statusBadge').innerText = "CONECTADO";
+                document.getElementById('statusBadge').className = "badge badge-ok";
+                log("✅ ¡Listo para usar!");
 
-            } catch (e) {
-                log("Error: " + e);
-                alert("Error: " + e);
+                // Iniciar lectura automática (cada 1.5s)
+                setInterval(actualizarDatos, 1500);
+
+            } catch (error) {
+                alert("Error: " + error);
+                log(error);
             }
         }
 
-        async function probar(key, valor) {
-            if (!characteristics[key]) return alert("Esa característica no está disponible");
+        async function actualizarDatos() {
+            if (!cache.temp) return;
+            try {
+                // Leer Temp
+                const vT = await cache.temp.readValue();
+                const t = vT.getUint16(0, true) / 10;
+                document.getElementById('tempActual').innerText = t.toFixed(1) + "°C";
+
+                // Leer Batería
+                const vB = await cache.batt.readValue();
+                const b = vB.getUint16(0, true);
+                document.getElementById('batteryLevel').innerText = b + "%";
+                
+                // Leer Objetivo
+                const vO = await cache.target.readValue();
+                const o = vO.getUint16(0, true) / 10;
+                document.getElementById('tempTarget').innerText = o + "°C";
+
+            } catch (e) { console.log(e); }
+        }
+
+        // --- LA LÓGICA MAESTRA ---
+        async function encender() {
+            if (!cache.target || !cache.on) return alert("No conectado");
+            
+            const grados = document.getElementById('inputTemp').value;
+            const valTemp = grados * 10; // 180 -> 1800
 
             try {
-                // Preparamos el dato (Little Endian)
-                const buffer = new ArrayBuffer(2);
-                new DataView(buffer).setUint16(0, valor, true);
+                log(`1. Fijando temperatura a ${grados}°C...`);
+                await escribir(cache.target, valTemp);
                 
-                await characteristics[key].writeValue(buffer);
+                log("2. Presionando botón de ENCENDIDO...");
+                await escribir(cache.on, 1); // Enviamos 1 al Botón B
                 
-                log(`⚡ ENVIADO a [${key}]: Valor ${valor}`);
-                document.getElementById('status').innerText = `Último intento: Botón ${key}`;
+                alert(`¡Vape encendido a ${grados}°C! El LED debe estar rojo.`);
                 
             } catch (e) {
-                log(`❌ Error en botón ${key}: ${e}`);
+                log("Error al encender: " + e);
+                alert("Hubo un error al enviar la orden");
             }
+        }
+
+        async function apagar() {
+            if (!cache.off) return;
+            try {
+                log("Presionando botón de APAGADO...");
+                await escribir(cache.off, 1); // Enviamos 1 al Botón C
+                
+                // Opcional: bajar la temperatura objetivo a 0 por si acaso
+                await escribir(cache.target, 0); 
+                
+                alert("Vaporizador detenido.");
+            } catch (e) { log(e); }
+        }
+
+        // Función auxiliar para escribir datos (Little Endian)
+        async function escribir(caracteristica, valor) {
+            const buffer = new ArrayBuffer(2);
+            new DataView(buffer).setUint16(0, valor, true);
+            await caracteristica.writeValue(buffer);
         }
     </script>
 </body>
