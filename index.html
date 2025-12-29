@@ -3,38 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crafty+ Controller V3</title>
+    <title>Crafty+ V3.1 Ultimate</title>
     <style>
         body { font-family: 'Verdana', sans-serif; background-color: #000; color: #fff; text-align: center; padding: 20px; margin: 0; }
         
-        /* ESTADO DE CONEXIÓN */
         .header { margin-bottom: 20px; }
         .badge-ok { background-color: #00ff00; color: #000; padding: 5px 10px; border-radius: 5px; font-weight: bold; }
         .badge-no { background-color: #ff0000; color: #fff; padding: 5px 10px; border-radius: 5px; font-weight: bold; }
 
-        /* TARJETAS */
         .card { background: #111; border: 1px solid #333; border-radius: 15px; padding: 20px; margin: 15px auto; max-width: 350px; }
         
         .temp-big { font-size: 50px; font-weight: bold; color: #00e5ff; text-shadow: 0 0 10px rgba(0, 229, 255, 0.5); margin: 10px 0; }
         .label { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
         
-        /* BOTONES */
-        button { border: none; padding: 18px; font-size: 16px; font-weight: bold; border-radius: 10px; cursor: pointer; width: 100%; margin-top: 10px; touch-action: manipulation; }
+        button { border: none; padding: 18px; font-size: 16px; font-weight: bold; border-radius: 10px; cursor: pointer; width: 100%; margin-top: 10px; touch-action: manipulation; transition: transform 0.1s; }
+        button:active { transform: scale(0.95); }
         .btn-connect { background: #fff; color: #000; }
         .btn-on { background: linear-gradient(to right, #ff416c, #ff4b2b); color: white; font-size: 20px; }
         .btn-off { background: #333; color: #fff; }
-        
-        /* INPUT */
+        .btn-boost { background: linear-gradient(to right, #f12711, #f5af19); color: white; margin-top: 15px; font-size: 14px;}
+
         input[type="number"] { background: #222; border: 1px solid #444; color: #fff; font-size: 24px; padding: 10px; width: 80px; text-align: center; border-radius: 8px; }
 
-        /* LOGS */
         #logs { font-family: monospace; font-size: 10px; color: #666; text-align: left; margin-top: 30px; border-top: 1px solid #333; padding-top: 10px; height: 100px; overflow-y: auto; }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <h2>🔥 CRAFTY+ V3</h2>
+        <h2>🔥 CRAFTY+ V3.1</h2>
         <span id="statusBadge" class="badge-no">DESCONECTADO</span>
     </div>
 
@@ -64,11 +61,14 @@
         </div>
 
         <div class="card">
-            <div class="label">Configurar</div>
+            <div class="label">Control Inteligente</div>
             <br>
             <input type="number" id="inputTemp" value="180"> °C
             
-            <button class="btn-on" onclick="encenderVape()">🔥 CALENTAR</button>
+            <button class="btn-on" onclick="encenderConPatada()">🔥 CALENTAR</button>
+            
+            <button class="btn-boost" onclick="activarBoost()">⚡ ACTIVAR BOOST (+15°C)</button>
+            
             <button class="btn-off" onclick="apagarVape()">❄️ DETENER</button>
         </div>
     </div>
@@ -80,16 +80,12 @@
         const SUFFIX = '-4c45-4b43-4942-265a524f5453';
         const SERVICE_MAIN = '00000001' + SUFFIX;
         
-        const UUID_TEMP_ACTUAL = '00000011' + SUFFIX; // Read
-        const UUID_TEMP_TARGET = '00000021' + SUFFIX; // Read/Write
-        const UUID_BATERIA     = '00000041' + SUFFIX; // Read (Confirmado en tu captura)
+        const UUID_TEMP_ACTUAL = '00000011' + SUFFIX; 
+        const UUID_TEMP_TARGET = '00000021' + SUFFIX; 
+        const UUID_BATERIA     = '00000041' + SUFFIX; 
+        const UUID_BOOST       = '000000b1' + SUFFIX; // NUEVO: Posible disparador
 
-        // Cache de características
-        let cache = {
-            temp: null,
-            target: null,
-            batt: null
-        };
+        let cache = { temp: null, target: null, batt: null, boost: null };
         let loopInterval = null;
 
         function log(msg) {
@@ -101,21 +97,24 @@
 
         async function conectar() {
             try {
-                log("Buscando dispositivo...");
+                log("Buscando...");
                 const device = await navigator.bluetooth.requestDevice({
                     filters: [{ namePrefix: 'STORZ' }],
                     optionalServices: [SERVICE_MAIN]
                 });
 
-                log("Conectando...");
+                log("Conectando GATT...");
                 const server = await device.gatt.connect();
                 const service = await server.getPrimaryService(SERVICE_MAIN);
                 
-                // Mapear características
                 log("Obteniendo características...");
                 cache.temp   = await service.getCharacteristic(UUID_TEMP_ACTUAL);
                 cache.target = await service.getCharacteristic(UUID_TEMP_TARGET);
                 cache.batt   = await service.getCharacteristic(UUID_BATERIA);
+                
+                // Intentamos obtener el Boost
+                try { cache.boost = await service.getCharacteristic(UUID_BOOST); } 
+                catch(e) { log("No se detectó Boost (no crítico)"); }
 
                 // UI Update
                 document.getElementById('screen-connect').style.display = 'none';
@@ -124,84 +123,97 @@
                 document.getElementById('statusBadge').innerText = "CONECTADO";
                 log("¡Conexión exitosa!");
 
-                // Iniciar bucle de lectura (Polling)
                 iniciarLecturaConstante();
 
             } catch (error) {
                 alert("Error: " + error);
-                log(error);
             }
         }
 
         function iniciarLecturaConstante() {
-            // Leer datos cada 1.5 segundos
             loopInterval = setInterval(async () => {
                 if (!cache.temp || !cache.batt) return;
-
                 try {
-                    // 1. Leer Temperatura Actual
+                    // Leer Temp
                     const valTemp = await cache.temp.readValue();
                     const tempC = valTemp.getUint16(0, true) / 10;
                     document.getElementById('tempActual').innerText = tempC.toFixed(1) + "°C";
 
-                    // 2. Leer Batería
+                    // Leer Batería
                     const valBat = await cache.batt.readValue();
                     const batP = valBat.getUint16(0, true);
                     document.getElementById('batteryLevel').innerText = batP + "%";
 
-                    // 3. Leer Objetivo (Para saber si está ON u OFF)
+                    // Leer Objetivo
                     const valTarget = await cache.target.readValue();
                     const targetC = valTarget.getUint16(0, true) / 10;
                     document.getElementById('tempTarget').innerText = targetC > 0 ? targetC + "°C" : "OFF";
-
-                } catch (e) {
-                    console.log("Error lectura ciclo: " + e);
-                }
+                } catch (e) { console.log(e); }
             }, 1500);
         }
 
-        async function encenderVape() {
+        // --- LA TÉCNICA DE LA "PATADA" (KICKSTART) ---
+        async function encenderConPatada() {
             if (!cache.target) return alert("No conectado");
             
             const grados = document.getElementById('inputTemp').value;
-            const valor = grados * 10; // Ejemplo 180 -> 1800
+            const valorOn = grados * 10; 
+            
+            const btn = document.querySelector('.btn-on');
+            const textoOriginal = btn.innerText;
 
             try {
-                // ESTRATEGIA DOBLE GOLPE:
-                // 1. Enviamos 0 para 'despertar' la interrupción
-                // log("Despertando...");
-                // await escribir(0);
-                
-                // 2. Esperamos 200ms
-                // await new Promise(r => setTimeout(r, 200));
+                // PASO 1: ENVIAR CERO (RESET)
+                btn.innerText = "⏳ RESETEANDO...";
+                btn.style.background = "#555";
+                await escribir(cache.target, 0);
+                log("Reseteando calentador...");
 
-                // 3. Enviamos temperatura real
-                log(`Enviando orden: ${grados}°C`);
-                await escribir(valor);
+                // PASO 2: ESPERAR 1 SEGUNDO
+                await new Promise(r => setTimeout(r, 1000));
+
+                // PASO 3: ENVIAR TEMPERATURA REAL
+                btn.innerText = "🔥 ENVIANDO SEÑAL...";
+                btn.style.background = "linear-gradient(to right, #ff416c, #ff4b2b)";
+                await escribir(cache.target, valorOn);
                 
-                alert(`¡Comando enviado! El LED debería ponerse ROJO.`);
+                log(`¡ORDEN FINAL ENVIADA: ${grados}°C!`);
+                alert("Comando enviado. Mira si el LED cambia a ROJO.");
 
             } catch (e) {
-                log("Error al encender: " + e);
-                alert("Error enviando comando");
+                log("Error: " + e);
+                alert("Falló el envío");
+            } finally {
+                btn.innerText = textoOriginal;
+            }
+        }
+
+        async function activarBoost() {
+            if (!cache.boost) return alert("Tu dispositivo no soporta Boost remoto o no se encontró el UUID.");
+            try {
+                // Enviar un 1 al Boost suele activarlo
+                await escribir(cache.boost, 1);
+                log("¡Boost enviado!");
+                alert("Boost activado. Debería empezar a parpadear.");
+            } catch (e) {
+                log("Error Boost: " + e);
             }
         }
 
         async function apagarVape() {
             try {
                 log("Apagando...");
-                await escribir(0);
+                await escribir(cache.target, 0);
                 alert("Calentamiento detenido.");
             } catch (e) { log(e); }
         }
 
-        // Función auxiliar para escribir datos correctos
-        async function escribir(valor) {
-            if (!cache.target) return;
-            // Buffer Little Endian (Vital para S&B)
+        // Función auxiliar de escritura segura
+        async function escribir(caracteristica, valor) {
+            if (!caracteristica) return;
             const buffer = new ArrayBuffer(2);
-            new DataView(buffer).setUint16(0, valor, true);
-            await cache.target.writeValue(buffer);
+            new DataView(buffer).setUint16(0, valor, true); // Little Endian
+            await caracteristica.writeValue(buffer);
         }
 
     </script>
