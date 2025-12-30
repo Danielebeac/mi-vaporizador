@@ -3,191 +3,246 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CRAFTY+ APP</title>
-    <link rel="icon" type="image/x-icon" href="https://www.storz-bickel.com/media/favicon/default/favicon.ico">
+    <title>Crafty+ App Clone</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
+    
     <style>
-        /* --- ESTILOS CLONADOS (Pixel Perfect) --- */
         :root {
-            --sb-orange: #f58220;
-            --sb-blue: #002d5a; /* Azul oscuro barra inferior */
-            --sb-grey: #4a4a4a;
-            --bg-light: #ffffff;
+            --sb-orange: #ef7d00;
+            --sb-blue: #002855;
+            --white: #ffffff;
+            --grey-text: #333;
         }
 
-        body { 
-            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; 
-            background-color: var(--bg-light); 
-            color: #000; 
-            text-align: center; 
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--white);
+            color: var(--grey-text);
             margin: 0; padding: 0;
             height: 100vh;
             display: flex; flex-direction: column;
             user-select: none;
-            -webkit-tap-highlight-color: transparent;
+            overflow: hidden;
         }
 
-        /* HEADER */
-        .header { 
-            padding: 10px 15px; 
+        /* --- HEADER SUPERIOR --- */
+        .header {
+            height: 50px;
+            border-bottom: 1px solid #e0e0e0;
             display: flex; justify-content: space-between; align-items: center;
-            border-bottom: 1px solid #eee;
+            padding: 0 15px;
             background: #fff;
         }
-        .logo-img { height: 35px; } /* Espacio para logo real */
-        
-        .btn-disco {
-            border: 1px solid var(--sb-orange); color: var(--sb-orange);
-            background: #fff; padding: 5px 12px; border-radius: 4px;
-            font-weight: bold; font-size: 12px; cursor: pointer;
+        .brand {
+            font-family: 'Pacifico', cursive; /* Simulando logo Crafty+ */
+            color: var(--sb-orange);
+            font-size: 24px;
         }
-
-        /* PANTALLAS */
-        .screen { flex: 1; display: none; flex-direction: column; }
-        .visible { display: flex; }
-
-        /* PANTALLA CONEXIÓN */
-        #connect-view {
-            justify-content: center; align-items: center; padding: 20px;
-        }
-        .connect-btn {
-            width: 140px; height: 140px;
-            border-radius: 50%;
-            background: #f9f9f9;
-            border: 2px solid #eee;
-            display: flex; flex-direction: column;
-            justify-content: center; align-items: center;
+        .btn-logout {
+            border: 1px solid var(--sb-orange);
+            color: var(--sb-orange);
+            background: transparent;
+            padding: 6px 12px;
+            font-size: 12px; font-weight: bold;
+            border-radius: 4px;
             cursor: pointer;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-            transition: 0.2s;
         }
-        .connect-btn:active { background: #eee; transform: scale(0.95); }
-        .connect-icon { font-size: 40px; color: var(--sb-orange); margin-bottom: 5px; }
 
-        /* PANTALLA PRINCIPAL */
-        #app-view { justify-content: space-between; position: relative; }
-
+        /* --- CONTENIDO PRINCIPAL --- */
         .main-content {
-            flex: 1; display: flex; flex-direction: column; 
-            align-items: center; justify-content: center;
-            padding-bottom: 40px;
+            flex: 1;
+            display: flex; flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding-top: 10px;
+            position: relative;
         }
 
-        /* IMAGEN PRODUCTO */
-        .device-img {
-            width: 120px; height: auto; margin-bottom: 20px;
-            opacity: 0.9;
-        }
-
-        /* TEMPERATURAS GRUESAS (Como la original) */
-        .temp-big { 
-            font-size: 60px; font-weight: 300; line-height: 1; 
-            display: flex; align-items: flex-start;
-        }
-        .unit-big { font-size: 24px; margin-top: 5px; color: #666; }
-
-        /* FILA DE CONTROL (+ 180 -) */
-        .control-row {
-            display: flex; align-items: center; gap: 30px; margin-top: 15px;
+        .sb-logo-small {
+            width: 40px; height: 40px;
+            background: #ef7d00; /* Placeholder naranja para logo S&B */
+            mask: url('https://www.storz-bickel.com/static/version1673347355/frontend/StorzBickel/default/en_US/images/logo.svg') no-repeat center;
+            -webkit-mask: url('https://www.storz-bickel.com/static/version1673347355/frontend/StorzBickel/default/en_US/images/logo.svg') no-repeat center;
+            margin-bottom: 5px;
         }
         
-        /* BOTONES TRIANGULARES NEGROS */
-        .btn-triangle {
-            width: 50px; height: 50px;
-            background: #333; 
-            clip-path: polygon(50% 0%, 0% 100%, 100% 100%); /* Triángulo arriba */
-            cursor: pointer; border: none;
+        .title-text {
+            font-size: 14px; letter-spacing: 1px; font-weight: bold;
+            margin-bottom: 10px; text-transform: uppercase;
         }
-        .btn-triangle.down { transform: rotate(180deg); } /* Triángulo abajo */
-        .btn-triangle:active { background: #000; }
 
-        /* OBJETIVO AL CENTRO */
-        .target-box { text-align: center; }
-        .target-val { font-size: 40px; font-weight: bold; color: #333; }
-
-        /* BATERÍA (Tira horizontal) */
-        .battery-strip {
-            width: 150px; height: 8px; background: #eee;
-            border-radius: 4px; margin-top: 30px; overflow: hidden;
+        .device-img {
+            height: 140px; width: auto;
+            margin-bottom: 10px;
         }
-        .battery-fill { height: 100%; background: #4CAF50; width: 0%; transition: 0.3s; }
-        .battery-num { font-size: 12px; color: #999; margin-top: 5px; }
+        
+        .device-name {
+            font-family: 'Pacifico', cursive;
+            font-size: 20px; color: #333;
+            margin-bottom: 15px;
+        }
 
-        /* BARRA INFERIOR AZUL */
+        /* --- NÚMEROS Y TRIÁNGULOS --- */
+        .controls-wrapper {
+            display: flex; align-items: center; justify-content: center;
+            width: 100%; gap: 15px;
+        }
+
+        .btn-tri-black {
+            width: 0; height: 0;
+            border-style: solid;
+            background: transparent;
+            cursor: pointer;
+            border: none; padding: 20px; /* Area táctil */
+        }
+        .tri-down {
+            border-width: 15px 12px 0 12px;
+            border-color: #333 transparent transparent transparent;
+        }
+        .tri-up {
+            border-width: 0 12px 15px 12px;
+            border-color: transparent transparent #333 transparent;
+        }
+        .btn-wrapper {
+            background: #eee; border-radius: 10px; 
+            width: 50px; height: 50px; display: flex; 
+            align-items: center; justify-content: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .numbers-col {
+            display: flex; flex-direction: column; align-items: center;
+            min-width: 100px;
+        }
+        .num-actual { font-size: 48px; font-weight: 300; line-height: 1; }
+        .num-target { font-size: 48px; font-weight: 300; line-height: 1; margin-top: 5px;}
+        .degree { font-size: 20px; vertical-align: super; }
+
+        /* BATERÍA */
+        .batt-icon {
+            width: 120px; height: 30px;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 40"><rect x="5" y="5" width="80" height="30" rx="2" stroke="%23555" fill="none" stroke-width="3"/><rect id="fill" x="8" y="8" width="74" height="24" rx="1" fill="%23555"/><rect x="88" y="12" width="5" height="16" fill="%23555"/></svg>') no-repeat center;
+            background-size: contain;
+            margin-top: 20px;
+        }
+
+        /* --- BARRA NARANJA (BOOST / AUMENTAR) --- */
+        .orange-bar {
+            background-color: var(--sb-orange);
+            width: 100%; padding: 10px 0;
+            display: flex; justify-content: space-between; align-items: center;
+            color: white; font-weight: bold; font-size: 14px;
+            margin-top: auto; /* Empujar al fondo */
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        }
+        .btn-white-tri {
+            width: 40px; height: 40px;
+            background: #fff; border-radius: 50%;
+            border: none; color: var(--sb-orange);
+            font-size: 24px; font-weight: bold;
+            margin: 0 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        /* --- BARRA AZUL (NAVEGACIÓN) --- */
         .nav-bar {
-            height: 60px; background: var(--sb-blue);
+            background-color: var(--sb-blue);
+            height: 60px;
             display: flex; justify-content: space-around; align-items: center;
         }
-        .nav-btn {
-            color: #8daec4; font-size: 10px; font-weight: bold;
+        .nav-item {
             display: flex; flex-direction: column; align-items: center;
-            text-transform: uppercase; letter-spacing: 0.5px;
+            color: #8daec4; font-size: 9px; text-transform: uppercase;
+            font-weight: 600; cursor: pointer;
         }
-        .nav-btn.active { color: #fff; }
-        .nav-icon { font-size: 20px; margin-bottom: 4px; }
+        .nav-item.active { color: white; }
+        .nav-icon { 
+            font-size: 20px; margin-bottom: 4px; 
+            display: block; height: 24px;
+        }
 
-        /* LOGO STORZ CARGADO DESDE URL EXTERNA */
-        .sb-logo-url {
-            background-image: url('https://www.storz-bickel.com/static/version1673347355/frontend/StorzBickel/default/en_US/images/logo.svg');
-            background-repeat: no-repeat;
-            background-size: contain;
-            width: 150px; height: 40px;
+        /* ESTADOS */
+        .screen { display: none; height: 100%; flex-direction: column; }
+        .visible { display: flex; }
+        
+        #connect-view { justify-content: center; align-items: center; }
+        .big-connect {
+            width: 100px; height: 100px; border: 4px solid #eee;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 40px; color: var(--sb-orange); cursor: pointer;
         }
+
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <div class="sb-logo-url"></div> <button class="btn-disco" onclick="disconnect()">Desconectar</button>
-    </div>
-
     <div id="connect-view" class="screen visible">
-        <div class="connect-btn" onclick="connect()">
-            <span class="connect-icon">⚡</span>
-            <span style="font-weight:bold; color:#555;">CONECTAR</span>
+        <div class="header" style="width:100%; position:absolute; top:0; box-sizing:border-box;">
+            <div class="brand">Crafty+</div>
         </div>
-        <p style="color:#999; font-size:12px; margin-top:20px;">
-            Asegúrate de que tu Crafty+ esté encendido.
-        </p>
+        <div class="big-connect" onclick="conectar()">⚡</div>
+        <p style="color:#999; margin-top:20px;">Toque para conectar</p>
     </div>
 
     <div id="app-view" class="screen">
         
+        <div class="header">
+            <div class="brand">Crafty+</div>
+            <button class="btn-logout" onclick="desconectar()">Desconectar</button>
+        </div>
+
         <div class="main-content">
-            <img src="https://www.storz-bickel.com/media/catalog/product/cache/27a9202574e4479dfa93880467770857/c/r/crafty_plus_v2_front_1.png" class="device-img" alt="Crafty+">
+            <div style="font-size:12px; font-weight:bold;">WWW.STORZ-BICKEL.COM</div>
+            <div class="title-text" style="margin-top:10px;">TEMPERATURA</div>
+            
+            <img src="https://www.storz-bickel.com/media/catalog/product/cache/27a9202574e4479dfa93880467770857/c/r/crafty_plus_v2_front_1.png" class="device-img">
+            
+            <div class="device-name">Crafty+</div>
 
-            <div class="temp-big">
-                <span id="ui-current">--</span>
-                <span class="unit-big">°C</span>
-            </div>
-
-            <div class="control-row">
-                <button class="btn-triangle down" onclick="changeTemp(-1)"></button>
-                
-                <div class="target-box">
-                    <div class="target-val" id="ui-target">180</div>
-                    <div style="font-size:10px; color:#aaa; font-weight:bold;">OBJETIVO</div>
+            <div class="controls-wrapper">
+                <div class="btn-wrapper" onclick="cambioManual(-1)">
+                    <div class="btn-tri-black tri-down"></div>
                 </div>
 
-                <button class="btn-triangle" onclick="changeTemp(1)"></button>
+                <div class="numbers-col">
+                    <div class="num-actual">
+                        <span id="txtActual">--</span><span class="degree">°C</span>
+                    </div>
+                    <div class="num-target">
+                        <span id="txtTarget">--</span><span class="degree">°C</span>
+                    </div>
+                </div>
+
+                <div class="btn-wrapper" onclick="cambioManual(1)">
+                    <div class="btn-tri-black tri-up"></div>
+                </div>
             </div>
 
-            <div class="battery-strip">
-                <div id="ui-batt-fill" class="battery-fill"></div>
-            </div>
-            <div class="battery-num" id="ui-batt-text">--%</div>
+            <div class="batt-icon">
+                </div>
+            <div id="txtBatt" style="font-weight:bold; margin-top:5px;">--%</div>
+        </div>
 
+        <div class="orange-bar">
+            <button class="btn-white-tri" onclick="accionBoost()">⚡</button>
+            <span>AUMENTAR (+15°C)</span> <button class="btn-white-tri" onclick="accionBoost()">+</button>
         </div>
 
         <div class="nav-bar">
-            <div class="nav-btn active">
-                <span class="nav-icon">⏻</span>
+            <div class="nav-item active">
+                <span class="nav-icon">📊</span>
                 Temperatura
             </div>
-            <div class="nav-btn">
+            <div class="nav-item">
                 <span class="nav-icon">⚙</span>
                 Ajustes
             </div>
-            <div class="nav-btn">
+            <div class="nav-item">
+                <span class="nav-icon">🔋</span> Astuto
+            </div>
+            <div class="nav-item">
                 <span class="nav-icon">ℹ</span>
                 Info
             </div>
@@ -195,46 +250,45 @@
     </div>
 
     <script>
-        // --- MOTOR "AGRESIVO" (Estilo Nativo) ---
-        // Sin colas complejas. Prioridad absoluta al usuario.
+        // --- MOTOR V17 (COLA DE COMANDOS) ---
+        // Usamos este motor porque es el más robusto para evitar choques
         
-        const UUIDS = {
-            s: '00000001-4c45-4b43-4942-265a524f5453', // Servicio
-            curr: '00000011-4c45-4b43-4942-265a524f5453', // Actual
-            targ: '00000021-4c45-4b43-4942-265a524f5453', // Objetivo
-            batt: '00000041-4c45-4b43-4942-265a524f5453', // Batería
-            on:   '00000081-4c45-4b43-4942-265a524f5453'  // Encender
+        const UUID = {
+            MAIN: '00000001-4c45-4b43-4942-265a524f5453',
+            ACT:  '00000011-4c45-4b43-4942-265a524f5453',
+            SET:  '00000021-4c45-4b43-4942-265a524f5453',
+            BAT:  '00000041-4c45-4b43-4942-265a524f5453',
+            ON:   '00000081-4c45-4b43-4942-265a524f5453'
         };
 
         let dev, char = {}, loop;
-        let pauseReading = false; // El secreto de la velocidad
-        let pauseTimeout;
+        let queue = Promise.resolve();
+        let localTarget = 180;
 
-        async function connect() {
+        function addQ(fn) {
+            queue = queue.then(fn).catch(e => console.error(e));
+            return queue;
+        }
+
+        async function conectar() {
             try {
                 dev = await navigator.bluetooth.requestDevice({
-                    acceptAllDevices: true, 
-                    optionalServices: [UUIDS.s]
+                    acceptAllDevices: true,
+                    optionalServices: [UUID.MAIN]
                 });
                 dev.addEventListener('gattserverdisconnected', onDisco);
-                
-                const server = await dev.gatt.connect();
-                const service = await server.getPrimaryService(UUIDS.s);
+                const srv = await dev.gatt.connect();
+                const svc = await srv.getPrimaryService(UUID.MAIN);
 
-                // Mapeo rápido
-                char.curr = await service.getCharacteristic(UUIDS.curr);
-                char.targ = await service.getCharacteristic(UUIDS.targ);
-                char.batt = await service.getCharacteristic(UUIDS.batt);
-                char.on   = await service.getCharacteristic(UUIDS.on);
+                char.act = await svc.getCharacteristic(UUID.ACT);
+                char.set = await svc.getCharacteristic(UUID.SET);
+                char.bat = await svc.getCharacteristic(UUID.BAT);
+                char.on  = await svc.getCharacteristic(UUID.ON);
 
-                // UI Switch
                 document.getElementById('connect-view').classList.remove('visible');
                 document.getElementById('app-view').classList.add('visible');
 
-                // Leer rápido al conectar
-                readAll();
-                // Bucle de lectura estándar (1.5s)
-                loop = setInterval(readLoop, 1500);
+                loop = setInterval(() => addQ(leer), 1500);
 
             } catch(e) { alert("Error: " + e); }
         }
@@ -244,78 +298,57 @@
             location.reload();
         }
 
-        function disconnect() {
+        function desconectar() {
             if(dev?.gatt?.connected) dev.gatt.disconnect();
-            else location.reload();
+            else onDisconnect();
         }
 
-        // --- LECTURA ---
-        async function readLoop() {
-            // SI EL USUARIO ESTÁ TOCANDO BOTONES, NO LEEMOS NADA
-            if(pauseReading) return;
+        async function leer() {
+            if(!char.act) return;
+            // Temp Actual
+            const vA = await char.act.readValue();
+            document.getElementById('txtActual').innerText = (vA.getUint16(0, true)/10).toFixed(0);
 
-            try {
-                if(char.curr) {
-                    const v = await char.curr.readValue();
-                    document.getElementById('ui-current').innerText = (v.getUint16(0, true)/10).toFixed(0);
-                }
-                if(char.batt) {
-                    const v = await char.batt.readValue();
-                    const b = v.getUint16(0, true);
-                    document.getElementById('ui-batt-text').innerText = b + "%";
-                    document.getElementById('ui-batt-fill').style.width = b + "%";
-                }
-                // Leemos el objetivo real del vape SOLO si no estamos pausados
-                if(char.targ) {
-                    const v = await char.targ.readValue();
-                    const t = v.getUint16(0, true)/10;
-                    // Actualizamos visualmente si es diferente
-                    if(t > 0) document.getElementById('ui-target').innerText = t;
-                }
-            } catch(e) {}
-        }
-        
-        // Helper inicial
-        async function readAll() { await readLoop(); }
-
-        // --- ESCRITURA (CAMBIO DE TEMPERATURA) ---
-        async function changeTemp(delta) {
-            // 1. PAUSAR LECTURAS (Para que no se trabe el envío)
-            pauseReading = true;
-            if(pauseTimeout) clearTimeout(pauseTimeout);
-            
-            // Reactivar lecturas en 2.5 segundos si no tocas nada más
-            pauseTimeout = setTimeout(() => { pauseReading = false; }, 2500);
-
-            // 2. CALCULAR Y ACTUALIZAR VISUALMENTE (Instantáneo)
-            const ui = document.getElementById('ui-target');
-            let val = parseInt(ui.innerText) + delta;
-            if(val > 210) val = 210;
-            if(val < 40) val = 40;
-            
-            ui.innerText = val; // ¡Pum! Cambio visual inmediato
-
-            // 3. ENVIAR FUEGO (Sin colas, sin esperas)
-            try {
-                const buffer = new ArrayBuffer(2);
-                new DataView(buffer).setUint16(0, val * 10, true);
-                
-                // Enviar Objetivo
-                await char.targ.writeValue(buffer);
-                
-                // Enviar Encendido (Buffer de 1)
-                const bufOn = new ArrayBuffer(2);
-                new DataView(bufOn).setUint16(0, 1, true);
-                await char.on.writeValue(bufOn);
-                
-                // Vibrar si es posible
-                if(navigator.vibrate) navigator.vibrate(30);
-
-            } catch(e) {
-                console.log("Error envío rápido");
-                // Si falla, no pasa nada, el usuario volverá a picarle.
-                // Así funciona la original.
+            // Temp Objetivo (Solo si no estamos editando)
+            // En V21 leemos siempre para sincronizar
+            const vS = await char.set.readValue();
+            const t = vS.getUint16(0, true)/10;
+            if(t > 0) {
+                localTarget = t;
+                document.getElementById('txtTarget').innerText = t.toFixed(0);
             }
+
+            // Batería
+            const vB = await char.bat.readValue();
+            const b = vB.getUint16(0, true);
+            document.getElementById('txtBatt').innerText = b + "%";
+        }
+
+        function cambioManual(delta) {
+            localTarget += delta;
+            // UI Optimista (Cambio instantáneo)
+            document.getElementById('txtTarget').innerText = localTarget;
+
+            addQ(async () => {
+                await write(char.set, localTarget * 10);
+                await write(char.on, 1);
+            });
+        }
+
+        async function accionBoost() {
+            localTarget = Math.min(localTarget + 15, 210);
+            document.getElementById('txtTarget').innerText = localTarget;
+            addQ(async () => {
+                await write(char.set, localTarget * 10);
+                await write(char.on, 1);
+            });
+            alert("BOOST ACTIVADO (+15°C)");
+        }
+
+        async function write(c, v) {
+            const b = new ArrayBuffer(2);
+            new DataView(b).setUint16(0, v, true);
+            await c.writeValue(b);
         }
     </script>
 </body>
