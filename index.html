@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CRAFTY+ V13 HYBRID</title>
+    <title>CRAFTY+ V15 FINAL FIX</title>
     <style>
-        /* DISEÑO MODERNO (V12) */
+        /* ESTILO V12 (Diseño Moderno) */
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #000; color: #fff; text-align: center; padding: 15px; margin: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
         
         .header { display: flex; justify-content: space-between; align-items: center; max-width: 400px; margin: 0 auto 15px auto; padding: 0 10px; }
@@ -51,14 +51,14 @@
 <body>
 
     <div class="header">
-        <div class="logo">CRAFTY<span>+</span> V13</div>
+        <div class="logo">CRAFTY<span>+</span> V15</div>
         <div id="statusBadge" class="badge">OFFLINE</div>
     </div>
 
     <div id="view-connect" class="screen visible">
         <div class="card" style="padding: 60px 20px; margin-top: 40px;">
-            <div style="font-size: 60px; margin-bottom: 20px;">🔥</div>
-            <p style="color: #666; font-size: 14px;">Motor V11 (Estable) + Diseño V12</p>
+            <div style="font-size: 60px; margin-bottom: 20px;">🛡️</div>
+            <p style="color: #666; font-size: 14px;">Motor Blindado V15<br>Insistencia Verificada</p>
             <button class="btn-main btn-heat" style="margin-top: 30px;" onclick="conectar()">CONECTAR</button>
         </div>
     </div>
@@ -101,7 +101,7 @@
             
             <hr style="border-color:#222; margin: 15px 0;">
             
-            <button id="btnCata" class="btn-main btn-cata" onclick="iniciarCataV13()">
+            <button id="btnCata" class="btn-main btn-cata" onclick="iniciarCataV15()">
                 <span>🍷</span> MODO CATADOR
             </button>
             
@@ -111,7 +111,6 @@
     </div>
 
     <script>
-        // --- MOTOR V11 (El que sí funciona) ---
         const UUID = {
             MAIN:   '00000001-4c45-4b43-4942-265a524f5453',
             ACTUAL: '00000011-4c45-4b43-4942-265a524f5453',
@@ -122,10 +121,9 @@
         };
 
         let device, char = {}, loop, cataRun = false;
-        let isWriting = false; // El Semáforo
+        let isWriting = false; 
         let debounceTimer = null;
 
-        // --- CONEXIÓN SECUENCIAL (Estable) ---
         async function conectar() {
             try {
                 device = await navigator.bluetooth.requestDevice({
@@ -137,7 +135,6 @@
                 const server = await device.gatt.connect();
                 const service = await server.getPrimaryService(UUID.MAIN);
 
-                // RECUPERAMOS LA CARGA UNO POR UNO (Seguridad)
                 char.actual = await service.getCharacteristic(UUID.ACTUAL);
                 char.target = await service.getCharacteristic(UUID.TARGET);
                 char.batt   = await service.getCharacteristic(UUID.BATT);
@@ -145,7 +142,6 @@
                 char.off    = await service.getCharacteristic(UUID.OFF);
 
                 uiConnected();
-                // Polling normal (1s) para no saturar
                 loop = setInterval(leerDatos, 1000);
 
             } catch (e) { alert("Error: " + e); }
@@ -169,13 +165,10 @@
             else onDisconnect();
         }
 
-        // --- LECTURA SECUENCIAL (La que muestra los datos) ---
         async function leerDatos() {
-            // Si el semáforo está rojo (escribiendo), no leemos
             if(isWriting || !char.actual) return;
             
             try {
-                // Uno por uno... paciencia para que el chip responda
                 const vT = await char.actual.readValue();
                 document.getElementById('tempActual').innerText = (vT.getUint16(0, true)/10).toFixed(1);
 
@@ -185,11 +178,9 @@
 
                 const vB = await char.batt.readValue();
                 document.getElementById('batteryLevel').innerText = vB.getUint16(0, true) + "%";
-                
             } catch(e) {}
         }
 
-        // --- CONTROL MANUAL OPTIMISTA (La magia de la velocidad) ---
         function cambioManual(delta) {
             const input = document.getElementById('inputTemp');
             let nuevoValor = parseInt(input.value) + delta;
@@ -197,34 +188,22 @@
             if(nuevoValor > 210) nuevoValor = 210;
             if(nuevoValor < 40) nuevoValor = 40;
 
-            // 1. VISUAL: Cambia instantáneo (Engaña al cerebro)
             input.value = nuevoValor;
-            
-            // 2. LÓGICA: Espera a que termines de pulsar (Debounce)
             if(debounceTimer) clearTimeout(debounceTimer);
-            
-            debounceTimer = setTimeout(() => {
-                enviarComandoSeguro(nuevoValor); 
-            }, 400); // 400ms de espera
+            debounceTimer = setTimeout(() => { enviarComandoSeguro(nuevoValor); }, 400); 
         }
 
-        // Función de escritura con Semáforo
         async function enviarComandoSeguro(temp) {
-            isWriting = true; // 🔴 Semáforo Rojo
+            isWriting = true;
             document.getElementById('statusText').innerText = "Actualizando...";
 
             try {
                 await write(char.target, temp * 10);
                 await write(char.on, 1);
-                
-                // Pequeña pausa para asegurar
                 await new Promise(r => setTimeout(r, 200));
-                
                 document.getElementById('statusText').innerText = "";
-            } catch(e) { 
-                console.log("Error escritura");
-            }
-            isWriting = false; // 🟢 Semáforo Verde
+            } catch(e) { console.log("Error escritura"); }
+            isWriting = false;
         }
 
         async function accionEncender(valOverride = null) {
@@ -251,8 +230,8 @@
             isWriting = false;
         }
 
-        // --- MODO CATADOR ROBUSTO ---
-        async function iniciarCataV13() {
+        // --- MODO CATADOR V15 (PARANOICO) ---
+        async function iniciarCataV15() {
             if(cataRun) return;
             cataRun = true;
             
@@ -268,17 +247,50 @@
                 if(!cataRun) break;
                 const T = pasos[i];
                 
-                status.innerText = `Paso ${i+1}: Subiendo a ${T}°C`;
+                status.innerText = `Paso ${i+1}: Enviando ${T}°C...`;
                 document.getElementById('inputTemp').value = T;
                 
-                // Usamos el envío seguro
-                await enviarComandoSeguro(T);
+                // 1. ENVÍO CON VERIFICACIÓN (INSISTENCIA)
+                let confirmado = false;
+                let intentos = 0;
+                
+                isWriting = true; // Bloqueamos lectura normal
+                while(!confirmado && intentos < 5 && cataRun) {
+                    try {
+                        console.log(`Intento ${intentos+1} para ${T}°C`);
+                        // Enviar orden
+                        await write(char.target, T * 10);
+                        await write(char.on, 1);
+                        
+                        // Esperar un momento
+                        await new Promise(r => setTimeout(r, 800));
+                        
+                        // VERIFICAR SI OBEDECIÓ
+                        const check = await char.target.readValue();
+                        const valCheck = check.getUint16(0, true) / 10;
+                        
+                        if(Math.abs(valCheck - T) < 1) {
+                            confirmado = true;
+                            console.log("¡Confirmado!");
+                        } else {
+                            status.innerText = `Reintentando ${T}°C...`;
+                        }
+                    } catch(e) { console.log("Error verificación"); }
+                    intentos++;
+                }
+                isWriting = false; // Liberamos
 
-                // Esperar llegada
+                if(!confirmado) {
+                    alert("El dispositivo no responde. ¿Está encendido?");
+                    break;
+                }
+
+                // 2. Esperar llegada
+                status.innerText = `Subiendo a ${T}°C...`;
                 await esperarTemp(T);
                 if(!cataRun) break;
 
-                // Cuenta atrás
+                // 3. Cuenta atrás
                 for(let s=45; s>0; s--) {
                     if(!cataRun) break;
                     status.innerText = `🔥 Saboreando ${T}°C - ${s}s`;
@@ -292,7 +304,7 @@
                 cataRun = false;
                 btn.style.background = "";
                 btn.innerHTML = "<span>🍷</span> MODO CATADOR";
-                btn.onclick = iniciarCataV13;
+                btn.onclick = iniciarCataV15;
             }
         }
 
