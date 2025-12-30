@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CRAFTY+ V14 UNIVERSAL</title>
+    <title>CRAFTY+ V13 HYBRID</title>
     <style>
+        /* DISEÑO MODERNO (V12) */
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #000; color: #fff; text-align: center; padding: 15px; margin: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
         
         .header { display: flex; justify-content: space-between; align-items: center; max-width: 400px; margin: 0 auto 15px auto; padding: 0 10px; }
@@ -18,7 +19,6 @@
         
         .card { background: #111; border-radius: 20px; padding: 20px; margin-bottom: 12px; border: 1px solid #222; position: relative; }
 
-        /* VISUALIZADOR */
         .temp-display { position: relative; height: 100px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
         .temp-val { font-size: 80px; font-weight: 200; line-height: 1; letter-spacing: -4px; }
         .temp-unit { font-size: 20px; color: #666; position: absolute; top: 10px; right: 20px; }
@@ -29,7 +29,6 @@
         .val { font-size: 16px; font-weight: 700; }
         .orange { color: #ff9f43; } .green { color: #2ecc71; }
 
-        /* CONTROLES */
         .control-bar { display: flex; align-items: center; justify-content: space-between; background: #1a1a1a; border-radius: 16px; padding: 6px; margin-bottom: 15px; }
         .btn-round { width: 55px; height: 55px; border-radius: 12px; border: none; background: #333; color: #fff; font-size: 28px; cursor: pointer; }
         .btn-round:active { background: #555; transform: scale(0.92); }
@@ -52,15 +51,15 @@
 <body>
 
     <div class="header">
-        <div class="logo">CRAFTY<span>+</span> V14</div>
+        <div class="logo">CRAFTY<span>+</span> V13</div>
         <div id="statusBadge" class="badge">OFFLINE</div>
     </div>
 
     <div id="view-connect" class="screen visible">
         <div class="card" style="padding: 60px 20px; margin-top: 40px;">
-            <div style="font-size: 60px; margin-bottom: 20px;">📡</div>
-            <p style="color: #666; font-size: 14px;">Búsqueda Universal Activa<br>(Selecciona "STORZ&BICKEL" en la lista)</p>
-            <button class="btn-main btn-heat" style="margin-top: 30px;" onclick="conectar()">BUSCAR DISPOSITIVOS</button>
+            <div style="font-size: 60px; margin-bottom: 20px;">🔥</div>
+            <p style="color: #666; font-size: 14px;">Motor V11 (Estable) + Diseño V12</p>
+            <button class="btn-main btn-heat" style="margin-top: 30px;" onclick="conectar()">CONECTAR</button>
         </div>
     </div>
 
@@ -88,13 +87,13 @@
             <div id="statusText" class="status-text"></div>
 
             <div class="control-bar">
-                <button class="btn-round" onclick="cambioSmart(-1)">-</button>
+                <button class="btn-round" onclick="cambioManual(-1)">-</button>
                 <input type="number" id="inputTemp" value="180" readonly>
-                <button class="btn-round" onclick="cambioSmart(1)">+</button>
+                <button class="btn-round" onclick="cambioManual(1)">+</button>
             </div>
             
-            <button class="btn-main btn-heat" onclick="manualEncender()">
-                <span>🔥</span> FIJAR / ACTUALIZAR
+            <button class="btn-main btn-heat" onclick="accionEncender()">
+                <span>🔥</span> FIJAR TEMPERATURA
             </button>
             <button class="btn-main btn-boost" onclick="accionBoost()">
                 <span>⚡</span> BOOST (+15°C)
@@ -102,7 +101,7 @@
             
             <hr style="border-color:#222; margin: 15px 0;">
             
-            <button id="btnCata" class="btn-main btn-cata" onclick="iniciarCataRobust()">
+            <button id="btnCata" class="btn-main btn-cata" onclick="iniciarCataV13()">
                 <span>🍷</span> MODO CATADOR
             </button>
             
@@ -112,7 +111,7 @@
     </div>
 
     <script>
-        // --- CONSTANTES ---
+        // --- MOTOR V11 (El que sí funciona) ---
         const UUID = {
             MAIN:   '00000001-4c45-4b43-4942-265a524f5453',
             ACTUAL: '00000011-4c45-4b43-4942-265a524f5453',
@@ -123,26 +122,22 @@
         };
 
         let device, char = {}, loop, cataRun = false;
-        let isBusy = false; // Semáforo de tráfico (Lógica V11)
+        let isWriting = false; // El Semáforo
         let debounceTimer = null;
 
-        // --- CONEXIÓN UNIVERSAL (Infalible) ---
+        // --- CONEXIÓN SECUENCIAL (Estable) ---
         async function conectar() {
             try {
-                // acceptAllDevices: true MUESTRA TODO. Imposible fallar.
                 device = await navigator.bluetooth.requestDevice({
-                    acceptAllDevices: true,
+                    filters: [{ namePrefix: 'STORZ' }],
                     optionalServices: [UUID.MAIN]
                 });
-                
                 device.addEventListener('gattserverdisconnected', onDisconnect);
                 
                 const server = await device.gatt.connect();
-                // Esperamos un poco para estabilidad
-                await new Promise(r => setTimeout(r, 500));
-                
                 const service = await server.getPrimaryService(UUID.MAIN);
 
+                // RECUPERAMOS LA CARGA UNO POR UNO (Seguridad)
                 char.actual = await service.getCharacteristic(UUID.ACTUAL);
                 char.target = await service.getCharacteristic(UUID.TARGET);
                 char.batt   = await service.getCharacteristic(UUID.BATT);
@@ -150,12 +145,10 @@
                 char.off    = await service.getCharacteristic(UUID.OFF);
 
                 uiConnected();
-                // Polling seguro (cada 1s) como en la V11
+                // Polling normal (1s) para no saturar
                 loop = setInterval(leerDatos, 1000);
 
-            } catch (e) { 
-                alert("No se pudo conectar: " + e); 
-            }
+            } catch (e) { alert("Error: " + e); }
         }
 
         function uiConnected() {
@@ -176,12 +169,13 @@
             else onDisconnect();
         }
 
-        // --- LECTURA SEGURA (V11) ---
+        // --- LECTURA SECUENCIAL (La que muestra los datos) ---
         async function leerDatos() {
-            // Si el semáforo está rojo (Busy), no leemos para no chocar
-            if(isBusy || !char.actual) return;
+            // Si el semáforo está rojo (escribiendo), no leemos
+            if(isWriting || !char.actual) return;
             
             try {
+                // Uno por uno... paciencia para que el chip responda
                 const vT = await char.actual.readValue();
                 document.getElementById('tempActual').innerText = (vT.getUint16(0, true)/10).toFixed(1);
 
@@ -191,57 +185,49 @@
 
                 const vB = await char.batt.readValue();
                 document.getElementById('batteryLevel').innerText = vB.getUint16(0, true) + "%";
+                
             } catch(e) {}
         }
 
-        // --- CONTROL MANUAL INTELIGENTE (Debounce) ---
-        function cambioSmart(delta) {
+        // --- CONTROL MANUAL OPTIMISTA (La magia de la velocidad) ---
+        function cambioManual(delta) {
             const input = document.getElementById('inputTemp');
             let nuevoValor = parseInt(input.value) + delta;
             
             if(nuevoValor > 210) nuevoValor = 210;
             if(nuevoValor < 40) nuevoValor = 40;
 
-            // Cambio visual instantáneo
+            // 1. VISUAL: Cambia instantáneo (Engaña al cerebro)
             input.value = nuevoValor;
             
-            // Esperamos a que dejes de pulsar (500ms)
+            // 2. LÓGICA: Espera a que termines de pulsar (Debounce)
             if(debounceTimer) clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => {
-                manualEncender(nuevoValor); 
-            }, 500);
-        }
-
-        // --- ENVÍO ROBUSTO (Semáforo V11) ---
-        async function enviarComandoSeguro(temp) {
-            isBusy = true; // 🔴 DETENER LECTURAS
-            document.getElementById('statusText').innerText = "Enviando...";
-
-            let intentos = 0;
-            let exito = false;
-
-            while(intentos < 2 && !exito) {
-                try {
-                    await write(char.target, temp * 10);
-                    await write(char.on, 1);
-                    await new Promise(r => setTimeout(r, 400));
-                    
-                    // Verificación simple
-                    exito = true; 
-                    document.getElementById('statusText').innerText = `Fijado a ${temp}°C`;
-
-                } catch(e) { console.log("Reintento..."); }
-                intentos++;
-            }
             
-            setTimeout(() => { 
-                isBusy = false; // 🟢 REANUDAR LECTURAS
-                if(!exito) document.getElementById('statusText').innerText = "Error envío";
-                else document.getElementById('statusText').innerText = "";
-            }, 500);
+            debounceTimer = setTimeout(() => {
+                enviarComandoSeguro(nuevoValor); 
+            }, 400); // 400ms de espera
         }
 
-        async function manualEncender(valOverride = null) {
+        // Función de escritura con Semáforo
+        async function enviarComandoSeguro(temp) {
+            isWriting = true; // 🔴 Semáforo Rojo
+            document.getElementById('statusText').innerText = "Actualizando...";
+
+            try {
+                await write(char.target, temp * 10);
+                await write(char.on, 1);
+                
+                // Pequeña pausa para asegurar
+                await new Promise(r => setTimeout(r, 200));
+                
+                document.getElementById('statusText').innerText = "";
+            } catch(e) { 
+                console.log("Error escritura");
+            }
+            isWriting = false; // 🟢 Semáforo Verde
+        }
+
+        async function accionEncender(valOverride = null) {
             const val = valOverride || document.getElementById('inputTemp').value;
             await enviarComandoSeguro(val);
             if(navigator.vibrate) navigator.vibrate(50);
@@ -251,22 +237,22 @@
             let actual = parseInt(document.getElementById('inputTemp').value);
             let target = Math.min(actual + 15, 210);
             document.getElementById('inputTemp').value = target; 
-            await manualEncender(target);
+            await accionEncender(target);
             alert(`🚀 BOOST: ${target}°C`);
         }
 
         async function accionApagar() {
             cataRun = false;
-            isBusy = true;
+            isWriting = true;
             try {
                 await write(char.off, 1);
                 await write(char.target, 0);
             } catch(e) {}
-            isBusy = false;
+            isWriting = false;
         }
 
         // --- MODO CATADOR ROBUSTO ---
-        async function iniciarCataRobust() {
+        async function iniciarCataV13() {
             if(cataRun) return;
             cataRun = true;
             
@@ -285,9 +271,10 @@
                 status.innerText = `Paso ${i+1}: Subiendo a ${T}°C`;
                 document.getElementById('inputTemp').value = T;
                 
+                // Usamos el envío seguro
                 await enviarComandoSeguro(T);
 
-                // Esperar temperatura
+                // Esperar llegada
                 await esperarTemp(T);
                 if(!cataRun) break;
 
@@ -305,7 +292,7 @@
                 cataRun = false;
                 btn.style.background = "";
                 btn.innerHTML = "<span>🍷</span> MODO CATADOR";
-                btn.onclick = iniciarCataRobust;
+                btn.onclick = iniciarCataV13;
             }
         }
 
@@ -315,6 +302,7 @@
                 const check = setInterval(() => {
                     safety++;
                     const curr = parseFloat(document.getElementById('tempActual').innerText);
+                    // Margen de 3 grados o timeout 90s
                     if(!cataRun || curr >= (meta - 3) || safety > 90) {
                         clearInterval(check);
                         resolve();
